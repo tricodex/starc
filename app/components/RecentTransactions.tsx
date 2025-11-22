@@ -29,7 +29,7 @@ export function RecentTransactions() {
 
       try {
         const currentBlock = await publicClient.getBlockNumber();
-        const fromBlock = currentBlock - BigInt(10000); // Look back ~10000 blocks
+        const fromBlock = currentBlock - BigInt(5000); // Look back ~5000 blocks to stay within RPC limits
 
         // Fetch Deposit Logs
         const logs = await publicClient.getContractEvents({

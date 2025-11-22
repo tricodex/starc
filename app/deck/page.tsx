@@ -128,7 +128,81 @@ export default function DeckPage() {
         </div>
       )
     },
-    // Slide 5: Demo
+    // Slide 5: Flow Diagram
+    {
+      id: 'diagram',
+      content: (
+        <div className="flex flex-col items-center justify-center h-full p-12 bg-white">
+          <h2 className="text-5xl font-bold text-zinc-900 font-display mb-16">The Starc Flow</h2>
+          <div className="w-full max-w-6xl relative">
+             {/* Diagram Container */}
+             <div className="grid grid-cols-5 gap-4 items-center text-center relative z-10">
+                
+                {/* Step 1: Merchant */}
+                <div className="flex flex-col items-center gap-4 group">
+                    <div className="w-24 h-24 bg-zinc-50 rounded-2xl border border-zinc-200 flex items-center justify-center shadow-sm group-hover:border-indigo-500 group-hover:shadow-md transition-all">
+                        <svg className="w-10 h-10 text-zinc-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    </div>
+                    <div className="text-lg font-bold text-zinc-900">Merchant</div>
+                    <div className="text-sm text-zinc-500">Generates Link</div>
+                </div>
+
+                {/* Arrow */}
+                <div className="h-0.5 bg-zinc-200 w-full relative">
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t-2 border-r-2 border-zinc-300 rotate-45"></div>
+                </div>
+
+                {/* Step 2: Payer */}
+                <div className="flex flex-col items-center gap-4 group">
+                    <div className="w-24 h-24 bg-zinc-50 rounded-2xl border border-zinc-200 flex items-center justify-center shadow-sm group-hover:border-indigo-500 group-hover:shadow-md transition-all">
+                        <svg className="w-10 h-10 text-zinc-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
+                    </div>
+                    <div className="text-lg font-bold text-zinc-900">Payer</div>
+                    <div className="text-sm text-zinc-500">Scans QR</div>
+                </div>
+
+                {/* Arrow */}
+                <div className="h-0.5 bg-zinc-200 w-full relative">
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t-2 border-r-2 border-zinc-300 rotate-45"></div>
+                </div>
+
+                {/* Step 3: Circle Wallet */}
+                <div className="flex flex-col items-center gap-4 group">
+                    <div className="w-24 h-24 bg-indigo-50 rounded-2xl border border-indigo-200 flex items-center justify-center shadow-sm group-hover:border-indigo-500 group-hover:shadow-md transition-all relative overflow-hidden">
+                        <div className="absolute inset-0 bg-indigo-100 opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                        <svg className="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                    </div>
+                    <div className="text-lg font-bold text-indigo-600">Circle Wallet</div>
+                    <div className="text-sm text-zinc-500">Programmable SDK</div>
+                </div>
+
+                 {/* Arrow */}
+                 <div className="h-0.5 bg-zinc-200 w-full relative">
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t-2 border-r-2 border-zinc-300 rotate-45"></div>
+                </div>
+
+                {/* Step 4: Starc Vault */}
+                <div className="flex flex-col items-center gap-4 group">
+                    <div className="w-24 h-24 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-center shadow-sm group-hover:border-emerald-500 group-hover:shadow-md transition-all">
+                        <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div className="text-lg font-bold text-emerald-600">Starc Vault</div>
+                    <div className="text-sm text-zinc-500">ERC4626 Settlement</div>
+                </div>
+             </div>
+
+             {/* Connecting Line for Circle Integration */}
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-24 w-2/3 border-t-2 border-dashed border-indigo-200 flex justify-center pt-4">
+                <div className="bg-white px-4 text-sm font-medium text-indigo-400 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-indigo-400 rounded-full"></span>
+                    Powered by Circle W3S API
+                </div>
+             </div>
+          </div>
+        </div>
+      )
+    },
+    // Slide 6: Demo
     {
       id: 'demo',
       content: (
