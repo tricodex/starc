@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Button } from './ui/Button';
 import { useState, useEffect } from 'react';
 import { useCircleWallet } from '../context/CircleWalletContext';
+import { TokenBalanceDropdown } from './TokenBalanceDropdown';
 
 export function Header() {
   const { isConnected, walletId, walletAddress, createWallet, disconnect, isLoading } = useCircleWallet();
@@ -46,6 +47,7 @@ export function Header() {
         <div className="flex items-center gap-4">
           {mounted && isConnected && walletId ? (
             <div className="flex items-center gap-3">
+              <TokenBalanceDropdown walletAddress={walletAddress || walletId || ''} />
               <div 
                 className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 cursor-pointer hover:bg-indigo-100 transition-colors relative group"
                 onClick={copyToClipboard}
