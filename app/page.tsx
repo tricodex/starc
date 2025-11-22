@@ -1,63 +1,95 @@
 import Image from "next/image";
+import Link from "next/link";
+import { Card } from "./components/ui/Card";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-zinc-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      {/* Navigation Bar */}
+      <nav className="border-b border-zinc-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Image src="/logo.png" alt="Starc Logo" width={32} height={32} className="rounded-lg" />
+            <span className="text-xl font-bold text-zinc-900 font-display tracking-tight">starc</span>
+          </div>
+          <div className="flex items-center gap-6 text-sm font-medium text-zinc-600">
+            <Link href="/demo" className="hover:text-indigo-600 transition-colors">Vaults</Link>
+            <Link href="/admin" className="hover:text-indigo-600 transition-colors">Governance</Link>
+            <a href="https://docs.arc.network" target="_blank" className="hover:text-indigo-600 transition-colors">Docs</a>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        {/* Hero Section */}
+        <div className="text-center max-w-3xl mx-auto mb-24">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-medium mb-8">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            </span>
+            Live on Arc Testnet
+          </div>
+          <h1 className="text-5xl sm:text-7xl font-bold text-zinc-900 font-display tracking-tight mb-8 leading-[1.1]">
+            The Unified Layer for <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-emerald-500">Stablecoin Liquidity</span>
+          </h1>
+          <p className="text-xl text-zinc-500 mb-10 leading-relaxed">
+            Aggregate fragmented stablecoins into a single, robust unified token. 
+            Powered by Chainlink Oracles and secured by Arc.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/demo" className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:-translate-y-0.5">
+              Launch App
+            </Link>
+            <Link href="/docs/risk_architecture.md" className="w-full sm:w-auto px-8 py-4 bg-white text-zinc-900 border border-zinc-200 rounded-xl font-semibold hover:bg-zinc-50 transition-all hover:border-zinc-300">
+              Read Architecture
+            </Link>
+          </div>
+        </div>
+
+        {/* Feature Grid */}
+        <div className="grid md:grid-cols-3 gap-6 mb-24">
+          <Link href="/demo" className="group">
+            <Card className="h-full hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-900/5 transition-all duration-300 group-hover:-translate-y-1">
+              <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <h3 className="text-xl font-bold text-zinc-900 font-display mb-2">Unified Vaults</h3>
+              <p className="text-zinc-500">Deposit mARS, nARS, or wARS to mint uARS. One token, deep liquidity, zero fragmentation.</p>
+            </Card>
+          </Link>
+
+          <Link href="/123/payment" className="group">
+            <Card className="h-full hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 group-hover:-translate-y-1">
+              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+              </div>
+              <h3 className="text-xl font-bold text-zinc-900 font-display mb-2">Merchant Payments</h3>
+              <p className="text-zinc-500">Accept payments in any supported asset. Integrated with Circle Programmable Wallets.</p>
+            </Card>
+          </Link>
+
+          <Link href="/admin" className="group">
+            <Card className="h-full hover:border-zinc-300 hover:shadow-xl hover:shadow-zinc-900/5 transition-all duration-300 group-hover:-translate-y-1">
+              <div className="w-12 h-12 bg-zinc-100 text-zinc-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              </div>
+              <h3 className="text-xl font-bold text-zinc-900 font-display mb-2">Risk Management</h3>
+              <p className="text-zinc-500">Admin dashboard for monitoring oracle health, pausing contracts, and managing risk parameters.</p>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Trust Section */}
+        <div className="border-t border-zinc-200 pt-16 text-center">
+          <p className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-8">Secured by Industry Leaders</p>
+          <div className="flex items-center justify-center gap-12 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+             {/* Placeholders for logos - using text for now to avoid missing images */}
+             <span className="text-xl font-bold text-zinc-700">Circle</span>
+             <span className="text-xl font-bold text-zinc-700">Chainlink</span>
+             <span className="text-xl font-bold text-zinc-700">Arc</span>
+             <span className="text-xl font-bold text-zinc-700">OpenZeppelin</span>
+          </div>
         </div>
       </main>
     </div>

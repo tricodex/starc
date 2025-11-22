@@ -1,28 +1,126 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
+import Image from "next/image";
+import { useAccount, useConnect, useBalance, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { injected } from 'wagmi/connectors';
+import { parseUnits, formatUnits, erc20Abi } from 'viem';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { SUPPORTED_ASSETS } from '../../config/assets';
 import { CircleWallet } from '../../components/CircleWallet';
+
+// Mock Vault ABI for deposit
+const vaultAbi = [
+  {
+    name: 'deposit',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'asset', type: 'address' },
+      { name: 'assets', type: 'uint256' },
+      { name: 'receiver', type: 'address' }
+    ],
+    outputs: [{ name: 'shares', type: 'uint256' }]
+  }
+] as const;
 
 export default function MerchantPaymentPage({ params }: { params: Promise<{ merchant_id: string }> }) {
   const { merchant_id } = use(params);
   const [amount, setAmount] = useState('50.00');
   const [selectedAsset, setSelectedAsset] = useState<keyof typeof SUPPORTED_ASSETS>('mARS');
   const [paymentMethod, setPaymentMethod] = useState<'vault' | 'circle'>('vault');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [step, setStep] = useState<'connect' | 'approve' | 'pay' | 'success'>('connect');
+  const [error, setError] = useState<string | null>(null);
 
-  const handlePay = async () => {
-    setIsProcessing(true);
-    // Simulate payment
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsProcessing(false);
-    setIsSuccess(true);
+  const { address, isConnected } = useAccount();
+  const { connect } = useConnect();
+  const { writeContract, data: hash, isPending } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+
+  // Asset Data
+  const asset = SUPPORTED_ASSETS[selectedAsset];
+  const { data: balanceValue } = useReadContract({
+    address: asset.address as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: [address!],
+    query: { enabled: !!address },
+  });
+  
+  const balance = balanceValue ? { 
+    value: balanceValue, 
+    decimals: asset.decimals, 
+    symbol: asset.symbol,
+    formatted: formatUnits(balanceValue, asset.decimals)
+  } : undefined;
+  
+  // Allowance Check
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: asset.address as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [address!, asset.vaultAddress as `0x${string}`],
+    query: { enabled: !!address },
+  });
+
+  useEffect(() => {
+    if (isConnected) setStep('approve');
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (isConfirmed) {
+      if (step === 'approve') {
+        refetchAllowance();
+        setStep('pay');
+      } else if (step === 'pay') {
+        setStep('success');
+      }
+    }
+  }, [isConfirmed, step, refetchAllowance]);
+
+  // Check if approval is needed
+  useEffect(() => {
+    if (allowance && parseFloat(formatUnits(allowance, asset.decimals)) >= parseFloat(amount)) {
+      setStep('pay');
+    } else if (isConnected && step !== 'success') {
+      setStep('approve');
+    }
+  }, [allowance, amount, asset.decimals, isConnected, step]);
+
+  const handleConnect = () => {
+    connect({ connector: injected() });
   };
 
-  if (isSuccess) {
+  const handleApprove = () => {
+    setError(null);
+    try {
+      writeContract({
+        address: asset.address as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [asset.vaultAddress as `0x${string}`, parseUnits(amount, asset.decimals)],
+      });
+    } catch (e) {
+      setError('Approval failed. Please try again.');
+    }
+  };
+
+  const handlePay = () => {
+    setError(null);
+    try {
+      writeContract({
+        address: asset.vaultAddress as `0x${string}`,
+        abi: vaultAbi,
+        functionName: 'deposit',
+        args: [asset.address as `0x${string}`, parseUnits(amount, asset.decimals), '0x1234567890123456789012345678901234567890'], // Merchant Address
+      });
+    } catch (e) {
+      setError('Payment failed. Please try again.');
+    }
+  };
+
+  if (step === 'success') {
     return (
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full text-center p-8">
@@ -33,12 +131,14 @@ export default function MerchantPaymentPage({ params }: { params: Promise<{ merc
           </div>
           <h2 className="text-2xl font-bold text-zinc-900 font-display mb-2">Payment Successful!</h2>
           <p className="text-zinc-500 mb-6">
-            You paid <span className="font-medium text-zinc-900">{amount} {SUPPORTED_ASSETS[selectedAsset].symbol}</span> to Merchant #{merchant_id}
+            You paid <span className="font-medium text-zinc-900">{amount} {asset.symbol}</span> to Merchant #{merchant_id}
           </p>
-          <div className="bg-zinc-50 rounded-lg p-3 text-xs text-zinc-400 font-mono break-all">
-            0x7f9...3a2b
-          </div>
-          <Button className="w-full mt-6" onClick={() => setIsSuccess(false)}>
+          {hash && (
+            <div className="bg-zinc-50 rounded-lg p-3 text-xs text-zinc-400 font-mono break-all mb-6">
+              {hash}
+            </div>
+          )}
+          <Button className="w-full" onClick={() => { setStep('pay'); setPaymentMethod('vault'); }}>
             Make Another Payment
           </Button>
         </Card>
@@ -50,7 +150,9 @@ export default function MerchantPaymentPage({ params }: { params: Promise<{ merc
     <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
       <Card className="max-w-md w-full">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold mx-auto mb-3">M</div>
+          <div className="flex justify-center mb-3">
+            <Image src="/logo.png" alt="Starc Logo" width={48} height={48} className="rounded-lg" />
+          </div>
           <h1 className="text-xl font-bold text-zinc-900 font-display">Merchant #{merchant_id}</h1>
           <p className="text-sm text-zinc-500">Starc Unified Payment Gateway</p>
         </div>
@@ -101,22 +203,48 @@ export default function MerchantPaymentPage({ params }: { params: Promise<{ merc
                     </button>
                   ))}
                 </div>
+                {balance && (
+                  <div className="text-right mt-1 text-xs text-zinc-500">
+                    Balance: {balance?.formatted} {balance?.symbol}
+                  </div>
+                )}
               </div>
 
-              <Button 
-                className="w-full" 
-                size="lg" 
-                onClick={handlePay}
-                isLoading={isProcessing}
-              >
-                Pay {amount} {SUPPORTED_ASSETS[selectedAsset].symbol}
-              </Button>
+              {error && (
+                <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg">
+                  {error}
+                </div>
+              )}
+
+              {!isConnected ? (
+                <Button className="w-full" size="lg" onClick={handleConnect}>
+                  Connect Wallet
+                </Button>
+              ) : step === 'approve' ? (
+                <Button 
+                  className="w-full" 
+                  size="lg" 
+                  onClick={handleApprove}
+                  isLoading={isPending || isConfirming}
+                >
+                  {isPending || isConfirming ? 'Approving...' : `Approve ${asset.symbol}`}
+                </Button>
+              ) : (
+                <Button 
+                  className="w-full" 
+                  size="lg" 
+                  onClick={handlePay}
+                  isLoading={isPending || isConfirming}
+                >
+                  {isPending || isConfirming ? 'Processing...' : `Pay ${amount} ${asset.symbol}`}
+                </Button>
+              )}
             </>
           ) : (
             <CircleWallet 
-              onPay={() => setIsSuccess(true)} 
+              onPay={() => setStep('success')} 
               amount={amount} 
-              symbol={SUPPORTED_ASSETS[selectedAsset].symbol} 
+              symbol={asset.symbol} 
             />
           )}
         </div>

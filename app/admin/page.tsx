@@ -1,5 +1,6 @@
 'use client';
 
+import Image from "next/image";
 import { useState } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -14,8 +15,8 @@ export default function AdminPage() {
       <header className="bg-white border-b border-zinc-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold">A</div>
-            <span className="font-display text-xl font-bold text-zinc-900">Starc Admin</span>
+            <Image src="/logo.png" alt="Starc Logo" width={32} height={32} className="rounded-lg" />
+            <span className="font-display text-xl font-bold text-zinc-900">starc admin</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-zinc-500">Logged in as Risk Manager</span>
