@@ -11,7 +11,7 @@ export const SUPPORTED_ASSETS = {
         vaultAddress: '0x1234567890123456789012345678901234567890', // Placeholder
         decimals: 18,
         symbol: 'mARS',
-        name: 'Mock ARS'
+        name: 'Testnet ARS'
     },
     'nARS': {
         address: '0x0000000000000000000000000000000000000000', // Placeholder

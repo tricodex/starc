@@ -18,7 +18,7 @@ async function createWallet(userId: string) {
         body: JSON.stringify({
             idempotencyKey: uuidv4(),
             userId: userId,
-            blockchains: ['ETH-SEPOLIA'], // Arc Testnet is compatible/based on this for now in test
+            blockchains: ['ARC-TESTNET'], // Arc Testnet Identifier
             description: 'Starc Merchant Wallet',
             walletSetId: process.env.CIRCLE_WALLET_SET_ID // Optional, or generate new
         })

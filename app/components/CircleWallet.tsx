@@ -39,10 +39,11 @@ export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
       });
       
       const data = await response.json();
+      const challengeId = data.data?.challengeId;
       
-      if (data.challengeId && sdk) {
+      if (challengeId && sdk) {
         // 2. Execute Challenge with SDK (User sets PIN)
-        sdk.execute(data.challengeId, (error, result) => {
+        sdk.execute(challengeId, (error, result) => {
           if (error) {
             console.error("SDK Error:", error);
             alert("Failed to create wallet: " + error.message);
@@ -65,12 +66,9 @@ export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
       }
     } catch (e) {
       console.error("Wallet Creation Failed:", e);
-      // For demo purposes, if API fails (due to missing keys), simulate success
-      setTimeout(() => {
-        setWalletId('wlt-demo-12345');
-        setStep('active');
-        setIsLoading(false);
-      }, 1500);
+      // Fallback removed to ensure no compromises. User must provide API keys.
+      alert("Failed to create wallet. Please check your Circle API Keys in .env");
+      setIsLoading(false);
     }
   };
 

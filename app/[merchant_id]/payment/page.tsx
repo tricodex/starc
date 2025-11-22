@@ -11,20 +11,7 @@ import { SUPPORTED_ASSETS } from '../../config/assets';
 import { CircleWallet } from '../../components/CircleWallet';
 import { Header } from '../../components/Header';
 
-// Mock Vault ABI for deposit
-const vaultAbi = [
-  {
-    name: 'deposit',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'asset', type: 'address' },
-      { name: 'assets', type: 'uint256' },
-      { name: 'receiver', type: 'address' }
-    ],
-    outputs: [{ name: 'shares', type: 'uint256' }]
-  }
-] as const;
+import { VAULT_ABI } from '../../config/abis';
 
 export default function MerchantPaymentPage({ params }: { params: Promise<{ merchant_id: string }> }) {
   const { merchant_id } = use(params);
@@ -112,7 +99,7 @@ export default function MerchantPaymentPage({ params }: { params: Promise<{ merc
     try {
       writeContract({
         address: asset.vaultAddress as `0x${string}`,
-        abi: vaultAbi,
+        abi: VAULT_ABI,
         functionName: 'deposit',
         args: [asset.address as `0x${string}`, parseUnits(amount, asset.decimals), '0x1234567890123456789012345678901234567890'], // Merchant Address
       });
