@@ -1,80 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { W3SSdk } from '@circle-fin/w3s-pw-web-sdk';
+import { useCircleWallet } from '../context/CircleWalletContext';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { Input } from './ui/Input';
 
 interface CircleWalletProps {
   onPay?: () => void;
-  onWalletCreated?: (walletId: string) => void;
   amount?: string;
   symbol?: string;
 }
 
-export function CircleWallet({ onPay, onWalletCreated, amount, symbol }: CircleWalletProps) {
-  const [sdk, setSdk] = useState<W3SSdk | null>(null);
-  const [walletId, setWalletId] = useState<string | null>(null);
-  const [step, setStep] = useState<'init' | 'create' | 'pin' | 'active'>('init');
-  const [pin, setPin] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
+  const { walletId, isConnected, isLoading, createWallet } = useCircleWallet();
 
-  useEffect(() => {
-    // Initialize SDK
-    const w3s = new W3SSdk();
-    w3s.setAppSettings({
-      appId: process.env.NEXT_PUBLIC_CIRCLE_APP_ID || 'your-app-id',
-    });
-    setSdk(w3s);
-  }, []);
-
-  const handleCreateWallet = async () => {
-    setIsLoading(true);
-    try {
-      // 1. Request Challenge from Backend
-      const response = await fetch('/api/circle/wallet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_challenge', userId: 'merchant_user_123' }) // Demo User ID
-      });
-      
-      const data = await response.json();
-      const challengeId = data.data?.challengeId;
-      
-      if (challengeId && sdk) {
-        // 2. Execute Challenge with SDK (User sets PIN)
-        sdk.execute(challengeId, (error, result) => {
-          if (error) {
-            console.error("SDK Error:", error);
-            alert("Failed to create wallet: " + error.message);
-            setIsLoading(false);
-            return;
-          }
-          
-          if (result) {
-            console.log("Wallet Created:", result);
-            // Fix: Type assertion or safe access
-            const resData = result as any; 
-            setWalletId(resData.data?.walletId || 'wallet-123-mock'); 
-            setStep('active');
-            setIsLoading(false);
-            if (onPay) onPay(); // Trigger callback if provided
-            if (onWalletCreated) onWalletCreated(resData.data?.walletId || 'wallet-123-mock');
-          }
-        });
-      } else {
-        throw new Error("Failed to get challenge");
-      }
-    } catch (e) {
-      console.error("Wallet Creation Failed:", e);
-      // Fallback removed to ensure no compromises. User must provide API keys.
-      alert("Failed to create wallet. Please check your Circle API Keys in .env");
-      setIsLoading(false);
-    }
-  };
-
-  if (step === 'active') {
+  if (isConnected && walletId) {
     return (
       <Card className="bg-zinc-900 text-white border-zinc-800">
         <div className="flex items-center justify-between mb-4">
@@ -140,7 +79,7 @@ export function CircleWallet({ onPay, onWalletCreated, amount, symbol }: CircleW
         <Button 
           className="w-full" 
           size="lg" 
-          onClick={handleCreateWallet}
+          onClick={createWallet}
           isLoading={isLoading}
         >
           {isLoading ? 'Initializing SDK...' : 'Create Circle Wallet'}

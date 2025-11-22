@@ -5,17 +5,18 @@ import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { AiAgent } from './AiAgent';
 import { CircleWallet } from './CircleWallet';
+import { useCircleWallet } from '../context/CircleWalletContext';
 
 export function MerchantDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'agent'>('overview');
   const [autoSweep, setAutoSweep] = useState(true);
   const [balance, setBalance] = useState(12500.00);
   const [vaultBalance, setVaultBalance] = useState(50000.00);
-  const [walletId, setWalletId] = useState<string | null>(null);
+  const { walletId } = useCircleWallet();
 
   return (
     <div className="space-y-6">
-      {/* Tabs Navigation */}
+      {/* ... tabs ... */}
       <div className="flex items-center gap-4 border-b border-zinc-200 pb-1">
         <button
           onClick={() => setActiveTab('overview')}
@@ -115,8 +116,7 @@ export function MerchantDashboard() {
           </div>
 
           <div className="lg:col-span-1">
-             {/* Pass callback to capture wallet ID */}
-             <CircleWallet onWalletCreated={(id) => setWalletId(id)} />
+             <CircleWallet />
           </div>
         </div>
       ) : (

@@ -2,27 +2,17 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { injected } from 'wagmi/connectors';
 import { Button } from './ui/Button';
 import { useState, useEffect } from 'react';
+import { useCircleWallet } from '../context/CircleWalletContext';
 
 export function Header() {
-  const { address, isConnected } = useAccount();
-  const { connectors, connect } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { isConnected, walletId, createWallet, disconnect, isLoading } = useCircleWallet();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const handleConnect = () => {
-    const connector = connectors.find(c => c.id === 'injected') || connectors[0];
-    if (connector) {
-      connect({ connector });
-    }
-  };
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -45,15 +35,18 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          {mounted && isConnected && address ? (
+          {mounted && isConnected && walletId ? (
             <div className="flex items-center gap-3">
-              <span className="text-sm text-zinc-600 font-mono bg-zinc-100 px-3 py-1 rounded-full">
-                {formatAddress(address)}
-              </span>
+              <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-sm text-indigo-700 font-mono">
+                  {formatAddress(walletId)}
+                </span>
+              </div>
               <Button 
                 variant="secondary" 
                 size="sm"
-                onClick={() => disconnect()}
+                onClick={disconnect}
               >
                 Disconnect
               </Button>
@@ -62,9 +55,10 @@ export function Header() {
             <Button 
               size="sm" 
               className="bg-zinc-900 text-white hover:bg-zinc-800"
-              onClick={handleConnect}
+              onClick={createWallet}
+              isLoading={isLoading}
             >
-              Connect Wallet
+              {isLoading ? 'Initializing...' : 'Connect Circle Wallet'}
             </Button>
           )}
         </div>

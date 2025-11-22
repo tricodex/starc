@@ -28,13 +28,17 @@ const config = createConfig({
   },
 });
 
+import { CircleWalletProvider } from './context/CircleWalletContext';
+
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        {children}
+        <CircleWalletProvider>
+          {children}
+        </CircleWalletProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
