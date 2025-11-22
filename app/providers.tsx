@@ -15,8 +15,13 @@ const arcTestnet = {
   },
 } as const;
 
+import { injected } from 'wagmi/connectors';
+
 const config = createConfig({
   chains: [arcTestnet],
+  connectors: [
+    injected(),
+  ],
   transports: {
     [arcTestnet.id]: http(),
   },

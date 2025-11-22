@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { DepositForm } from '../components/DepositForm';
+import { VaultAnalytics } from '../components/VaultAnalytics';
 
 export default function DemoPage() {
   return (
@@ -34,28 +35,8 @@ export default function DemoPage() {
 
           {/* Right Column: Analytics / Info */}
           <div className="space-y-8">
-            {/* Stats Card */}
-            <div className="bg-white rounded-2xl border border-zinc-100 p-6 shadow-sm">
-              <h3 className="font-display text-lg font-semibold text-zinc-900 mb-4">Vault Statistics</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <div className="text-sm text-zinc-500 mb-1">Total Value Locked</div>
-                  <div className="text-2xl font-bold text-zinc-900">$1,234,567</div>
-                </div>
-                <div>
-                  <div className="text-sm text-zinc-500 mb-1">APY</div>
-                  <div className="text-2xl font-bold text-emerald-600">4.5%</div>
-                </div>
-                <div>
-                  <div className="text-sm text-zinc-500 mb-1">uARS Supply</div>
-                  <div className="text-2xl font-bold text-zinc-900">1.2M</div>
-                </div>
-                <div>
-                  <div className="text-sm text-zinc-500 mb-1">Peg Stability</div>
-                  <div className="text-2xl font-bold text-indigo-600">1.001</div>
-                </div>
-              </div>
-            </div>
+            {/* Analytics Component */}
+            <VaultAnalytics />
 
             {/* Oracle Info */}
             <div className="bg-zinc-900 rounded-2xl p-6 text-white">
