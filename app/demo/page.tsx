@@ -7,6 +7,7 @@ import { MerchantDashboard } from '../components/MerchantDashboard';
 import { BridgeWidget } from '../components/BridgeWidget';
 import { Header } from '../components/Header';
 import { Accordion } from '../components/ui/Accordion';
+import { RecentTransactions } from '../components/RecentTransactions';
 
 export default function DemoPage() {
   const [activeTab, setActiveTab] = useState<'vault' | 'merchant' | 'bridge'>('vault');
@@ -119,19 +120,21 @@ export default function DemoPage() {
 
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {activeTab === 'vault' && (
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 space-y-6">
-                  <VaultAnalytics />
-                  {/* Transaction History Placeholder */}
-                  <div className="bg-white rounded-xl border border-zinc-200 p-6">
-                    <h3 className="font-bold text-zinc-900 mb-4">Recent Transactions</h3>
-                    <div className="text-center py-8 text-zinc-400 text-sm bg-zinc-50 rounded-lg border border-dashed border-zinc-200">
-                      No recent transactions found
-                    </div>
+              <div className="space-y-6">
+                {/* Top Row: Analytics (Compact) */}
+                <VaultAnalytics />
+                
+                {/* Bottom Row: Deposit & Transactions */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Deposit Form - 5 cols */}
+                  <div className="lg:col-span-5">
+                    <DepositForm />
                   </div>
-                </div>
-                <div className="xl:col-span-1">
-                  <DepositForm />
+                  
+                  {/* Transactions - 7 cols */}
+                  <div className="lg:col-span-7">
+                    <RecentTransactions />
+                  </div>
                 </div>
               </div>
             )}
