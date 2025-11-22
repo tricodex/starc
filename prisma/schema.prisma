@@ -19,4 +19,19 @@ model Merchant {
   updatedAt     DateTime @updatedAt
 
   @@index([slug])
+  paymentRequests PaymentRequest[]
+}
+
+model PaymentRequest {
+  id          String   @id @default(cuid())
+  merchantId  String
+  merchant    Merchant @relation(fields: [merchantId], references: [id])
+  amount      Decimal  @db.Decimal(18, 6)
+  currency    String   @default("USDC")
+  status      String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  txHash      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([merchantId])
 }

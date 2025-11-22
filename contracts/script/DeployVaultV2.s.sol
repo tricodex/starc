@@ -26,13 +26,14 @@ contract DeployVaultV2 is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // For testnet: Deploy mock USDC (6 decimals like real USDC)
-        MockStable usdc = new MockStable("USD Coin", "USDC", 6);
-        console.log("Mock USDC deployed at:", address(usdc));
+        // For Arc Testnet: Use Native USDC Precompile
+        address usdcAddress = 0x3600000000000000000000000000000000000000;
+        IERC20 usdc = IERC20(usdcAddress);
+        console.log("Using Native USDC at:", address(usdc));
 
         // Deploy Vault
         StarcVaultV2 vault = new StarcVaultV2(
-            IERC20(address(usdc)),
+            usdc,
             "Starc USDC Vault",
             "sUSDC",
             deployer, // Admin
@@ -48,10 +49,9 @@ contract DeployVaultV2 is Script {
         console.log("Deposit Fee:", vault.depositFeeBps(), "bps (0.1%)");
         console.log("Withdraw Fee:", vault.withdrawFeeBps(), "bps (0.1%)");
 
-        // Mint some test USDC to deployer
-        usdc.mint(deployer, 10_000 * 1e6); // 10k USDC
-        console.log("Minted 10,000 USDC to deployer");
-
+        // Cannot mint Native USDC (must use faucet or bridge)
+        // usdc.mint(deployer, 10_000 * 1e6); 
+        
         vm.stopBroadcast();
 
         console.log("\n=== Deployment Summary ===");

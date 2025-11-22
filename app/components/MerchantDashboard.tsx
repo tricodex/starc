@@ -1,6 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { formatUnits } from 'viem';
+import { useAccount, useReadContract } from 'wagmi';
+import { erc20Abi, erc4626Abi } from 'viem';
+import { SUPPORTED_ASSETS } from '../config/assets';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { AiAgent } from './AiAgent';
@@ -10,11 +14,40 @@ import { useCircleWallet } from '../context/CircleWalletContext';
 export function MerchantDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'agent'>('overview');
   const [autoSweep, setAutoSweep] = useState(true);
-  // TODO: Query actual balance from Circle API (requires X-User-Token session management)
-  // Endpoint: GET /v1/w3s/wallets/{walletId}/balances
-  const [balance, setBalance] = useState(0);
-  const [vaultBalance, setVaultBalance] = useState(0);
   const { walletId } = useCircleWallet();
+  const { address } = useAccount();
+
+  const usdcConfig = SUPPORTED_ASSETS.USDC;
+
+  // 1. Read USDC Balance (Operational Float)
+  const { data: usdcBalanceData } = useReadContract({
+    address: usdcConfig.address,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address }
+  });
+
+  // 2. Read Vault Shares
+  const { data: vaultShares } = useReadContract({
+    address: usdcConfig.vaultAddress,
+    abi: erc4626Abi,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address }
+  });
+
+  // 3. Convert Shares to Assets (Vault Savings)
+  const { data: vaultAssetsData } = useReadContract({
+    address: usdcConfig.vaultAddress,
+    abi: erc4626Abi,
+    functionName: 'convertToAssets',
+    args: vaultShares ? [vaultShares] : undefined,
+    query: { enabled: !!vaultShares }
+  });
+
+  const balance = usdcBalanceData ? parseFloat(formatUnits(usdcBalanceData, usdcConfig.decimals)) : 0;
+  const vaultBalance = vaultAssetsData ? parseFloat(formatUnits(vaultAssetsData, usdcConfig.decimals)) : 0;
 
   return (
     <div className="space-y-6">
@@ -123,7 +156,7 @@ export function MerchantDashboard() {
         </div>
       ) : (
         <div className="max-w-4xl mx-auto">
-          <AiAgent balance={balance} vaultBalance={vaultBalance} walletId={walletId} />
+          <AiAgent balance={balance} vaultBalance={vaultBalance} walletId={walletId || address} />
         </div>
       )}
     </div>

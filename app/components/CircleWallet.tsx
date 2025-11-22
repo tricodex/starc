@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useCircleWallet } from '../context/CircleWalletContext';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -12,6 +13,21 @@ interface CircleWalletProps {
 
 export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
   const { walletId, isConnected, isLoading, createWallet } = useCircleWallet();
+  const [balance, setBalance] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (walletId) {
+        fetch(`/api/circle/wallet/balance?id=${walletId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data?.data?.tokenBalances) {
+                    const usdc = data.data.tokenBalances.find((t: any) => t.token.symbol === 'USDC');
+                    setBalance(usdc ? usdc.amount : '0.00');
+                }
+            })
+            .catch(err => console.error("Failed to fetch circle balance", err));
+    }
+  }, [walletId]);
 
   if (isConnected && walletId) {
     return (
@@ -36,8 +52,8 @@ export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-zinc-800/50 p-3 rounded-lg">
             <div className="text-xs text-zinc-400 mb-1">USDC Balance</div>
-            <div className="font-mono text-lg">--</div>
-            <div className="text-[10px] text-zinc-500">Balance query requires user session token</div>
+            <div className="font-mono text-lg">{balance !== null ? balance : 'Loading...'}</div>
+            <div className="text-[10px] text-zinc-500">Programmable Wallet</div>
           </div>
           <div className="bg-zinc-800/50 p-3 rounded-lg">
             <div className="text-xs text-zinc-400 mb-1">Status</div>

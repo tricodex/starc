@@ -1,12 +1,28 @@
 'use client';
 
 import { useState } from 'react';
+import { formatUnits } from 'viem';
+import { useAccount, useReadContract } from 'wagmi';
+import { erc20Abi } from 'viem';
+import { SUPPORTED_ASSETS } from '../config/assets';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 
 export function BridgeWidget() {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const { address } = useAccount();
+  const usdcConfig = SUPPORTED_ASSETS.USDC;
+
+  const { data: balanceData } = useReadContract({
+    address: usdcConfig.address,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address }
+  });
+
+  const balance = balanceData ? formatUnits(balanceData, usdcConfig.decimals) : '--';
 
   const handleBridge = async () => {
     setIsProcessing(true);
@@ -27,7 +43,7 @@ export function BridgeWidget() {
         <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
           <div className="flex justify-between mb-2">
             <span className="text-xs text-zinc-500">From</span>
-            <span className="text-xs text-zinc-500">Balance: -- USDC</span>
+            <span className="text-xs text-zinc-500">Balance: {balance} USDC</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-zinc-200 shadow-sm">

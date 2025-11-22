@@ -6,11 +6,11 @@ import { WagmiProvider, createConfig, http } from 'wagmi';
 import { mainnet, sepolia } from 'wagmi/chains';
 
 // Arc Testnet chain configuration
-// https://docs.arc.network - Chain ID: 5115
+// https://docs.arc.network - Chain ID: 5042002
 const arcTestnet = {
-  id: 5115,
+  id: 5042002,
   name: 'Arc Testnet',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
   rpcUrls: {
     default: { http: ['https://rpc.testnet.arc.network'] },
   },

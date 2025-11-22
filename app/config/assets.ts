@@ -1,7 +1,7 @@
 export const SUPPORTED_ASSETS = {
     'USDC': {
-        address: '0x3600000000000000000000000000000000000000', // Native USDC on Arc Testnet
-        vaultAddress: '0x1234567890123456789012345678901234567890', // Placeholder (Replace with deployed Vault)
+        address: '0x3600000000000000000000000000000000000000', // Native USDC on Arc Testnet (Verified)
+        vaultAddress: '0x6b9214D97aebd45D308F3dBdf599042f51B3D846', // StarcVaultV2 Deployed 2025-11-22
         decimals: 6,
         symbol: 'USDC',
         name: 'Native USDC'

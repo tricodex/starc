@@ -11,19 +11,13 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         {/* Hero Section */}
         <div className="text-center max-w-3xl mx-auto mb-24">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-medium mb-8">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-            </span>
-            Live on Arc Testnet
-          </div>
+          
           <h1 className="text-5xl sm:text-7xl font-bold text-zinc-900 font-display tracking-tight mb-8 leading-[1.1]">
             The Unified Layer for <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-emerald-500">Stablecoin Liquidity</span>
           </h1>
           <p className="text-xl text-zinc-500 mb-10 leading-relaxed">
             Aggregate fragmented stablecoins into a single, robust unified token. 
-            Powered by Chainlink Oracles and secured by Arc.
+            {/* Powered by Circle and secured by Arc. */}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/demo" className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:-translate-y-0.5">
