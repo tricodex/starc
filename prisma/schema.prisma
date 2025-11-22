@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("STARC_DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("STARC_POSTGRES_PRISMA_URL") // Uses connection pooling
+  directUrl = env("STARC_POSTGRES_URL_NON_POOLING") // Uses direct connection
 }
 
 model Merchant {
