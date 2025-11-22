@@ -1,31 +1,59 @@
 'use server';
 
 import { NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
+import { createUserToken, CIRCLE_API_KEY } from '@/app/lib/circle';
 
 // This route handles transfer requests
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { walletId, recipientAddress, amount, tokenId } = body;
+    const { walletId, destinationAddress, amount, tokenId, userId } = body;
 
     // basic validation
-    if (!walletId || !recipientAddress || !amount) {
-        return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
+    if (!walletId || !destinationAddress || !amount || !tokenId || !userId) {
+      return NextResponse.json({ message: 'Missing required fields: walletId, destinationAddress, amount, tokenId, userId' }, { status: 400 });
     }
-    
-    // TODO: Integrate with Circle API to create a transfer transaction
-    // For the demo, we are simulating the response structure that a real implementation would return
-    // so that the frontend SDK can attempt to handle it (or we show a message).
-    
-    // In a real scenario:
-    // 1. Authenticate user
-    // 2. Call POST /v1/w3s/users/transactions/transfer
-    // 3. Return { challengeId: "..." }
-    
-    return NextResponse.json({ 
-        message: "Transfer functionality requires backend integration with Circle Transfer API. This is a demo route.",
-        // challengeId: "mock-challenge-id" 
-    }, { status: 200 }); // Returning 200 to not break the UI flow immediately, but logic above handles it.
+
+    // 1. Get User Token
+    const { userToken } = await createUserToken(userId);
+
+    // 2. Initiate Transfer
+    const response = await fetch('https://api.circle.com/v1/w3s/users/transactions/transfer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CIRCLE_API_KEY}`,
+        'X-User-Token': userToken
+      },
+      body: JSON.stringify({
+        idempotencyKey: uuidv4(),
+        userId: userId,
+        destinationAddress: destinationAddress,
+        amounts: [amount],
+        tokenId: tokenId,
+        walletId: walletId,
+        fee: {
+          type: "level",
+          config: {
+            feeLevel: "MEDIUM"
+          }
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Circle Transfer API Error:", errorText);
+      return NextResponse.json({ message: `Circle Transfer Failed: ${errorText}` }, { status: response.status });
+    }
+
+    const data = await response.json();
+
+    // 3. Return Challenge ID
+    return NextResponse.json({
+      challengeId: data.data.challengeId
+    }, { status: 200 });
 
   } catch (error) {
     console.error('Transfer API Error:', error);

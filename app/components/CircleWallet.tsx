@@ -12,9 +12,11 @@ interface CircleWalletProps {
   symbol?: string;
 }
 
-export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
-  const { walletId, isConnected, isLoading, createWallet } = useCircleWallet();
+export function CircleWallet({ onPay, amount, symbol, recipientAddress }: CircleWalletProps & { recipientAddress?: string }) {
+  const { walletId, isConnected, isLoading, createWallet, sdk } = useCircleWallet();
   const [balance, setBalance] = useState<string | null>(null);
+  const [tokenId, setTokenId] = useState<string | null>(null);
+  const [isTransferring, setIsTransferring] = useState(false);
 
   useEffect(() => {
     if (walletId) {
@@ -26,14 +28,73 @@ export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
                     const token = data.data.tokenBalances.find((t: any) => 
                         t.token.symbol === symbol || (symbol === 'USDC' && t.token.symbol === 'USDC')
                     );
-                    // If not found, look for USDC as fallback or just show 0.00
-                    // Actually, better to show 0.00 if not found.
-                    setBalance(token ? token.amount : '0.00');
+                    
+                    if (token) {
+                        setBalance(token.amount);
+                        setTokenId(token.token.id);
+                    } else {
+                        setBalance('0.00');
+                    }
                 }
             })
             .catch(err => console.error("Failed to fetch circle balance", err));
     }
   }, [walletId, symbol]);
+
+  const handleTransfer = async () => {
+    if (!sdk || !walletId || !tokenId || !amount || !recipientAddress) {
+        console.error("Missing transfer requirements", { sdk: !!sdk, walletId, tokenId, amount, recipientAddress });
+        alert("Recipient address is missing.");
+        return;
+    }
+
+    setIsTransferring(true);
+    try {
+        // 1. Get User ID from localStorage (needed for backend)
+        const userId = localStorage.getItem('circle_user_id');
+        if (!userId) throw new Error("User ID not found");
+
+        // 2. Initiate Transfer on Backend
+        const response = await fetch('/api/circle/wallet/transfer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                walletId,
+                destinationAddress: recipientAddress,
+                amount,
+                tokenId,
+                userId
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Transfer failed");
+
+        const challengeId = data.challengeId;
+        if (!challengeId) throw new Error("No challenge ID returned");
+
+        // 3. Execute Challenge (PIN)
+        sdk.execute(challengeId, (error, result) => {
+            setIsTransferring(false);
+            if (error) {
+                console.error("Transfer Challenge Error:", error);
+                alert(`Transfer failed: ${error.message}`);
+                return;
+            }
+
+            if (result) {
+                console.log("Transfer Initiated:", result);
+                // 4. Notify Parent
+                if (onPay) onPay();
+            }
+        });
+
+    } catch (error) {
+        console.error("Transfer Error:", error);
+        alert("Failed to initiate transfer. See console for details.");
+        setIsTransferring(false);
+    }
+  };
 
   if (isConnected && walletId) {
     return (
@@ -63,10 +124,17 @@ export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
         {onPay && (
             <Button 
                 className="w-full bg-white text-zinc-900 hover:bg-zinc-100"
-                onClick={onPay}
+                onClick={handleTransfer}
+                isLoading={isTransferring}
+                disabled={!tokenId || !balance || parseFloat(balance) < parseFloat(amount || '0')}
             >
-                Pay Now
+                {isTransferring ? 'Processing...' : 'Pay Now'}
             </Button>
+        )}
+        {(!tokenId || (balance && parseFloat(balance) < parseFloat(amount || '0'))) && (
+            <p className="text-xs text-red-400 text-center mt-2">
+                Insufficient funds or token not found.
+            </p>
         )}
       </Card>
     );

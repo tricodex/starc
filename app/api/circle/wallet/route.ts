@@ -2,24 +2,13 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { circleRateLimiter, checkRateLimit, getClientIdentifier } from "@/app/lib/ratelimit";
+import { createUserToken, CIRCLE_API_KEY, APP_ID } from "@/app/lib/circle";
 
 // Validation schemas
 const CreateChallengeRequestSchema = z.object({
   action: z.literal('create_challenge'),
   userId: z.string().min(1, "User ID is required").max(100),
 });
-
-// Environment variables with validation
-const CIRCLE_API_KEY = process.env.CIRCLE_API_KEY;
-const APP_ID = process.env.NEXT_PUBLIC_CIRCLE_APP_ID;
-
-// Check critical environment variables at module load
-if (!CIRCLE_API_KEY) {
-  console.error("CRITICAL: CIRCLE_API_KEY is not set in environment variables");
-}
-if (!APP_ID) {
-  console.error("CRITICAL: NEXT_PUBLIC_CIRCLE_APP_ID is not set in environment variables");
-}
 
 interface CircleAPIError {
   code?: number;
@@ -36,13 +25,6 @@ interface CircleUser {
 interface CircleWalletResponse {
   data?: {
     challengeId?: string;
-  };
-}
-
-interface CircleUserTokenResponse {
-  data: {
-    userToken: string;
-    encryptionKey: string;
   };
 }
 
@@ -75,30 +57,6 @@ async function createUser(userId: string): Promise<CircleUser> {
 
   const data = await response.json();
   return data.data;
-}
-
-async function createUserToken(userId: string): Promise<{ userToken: string; encryptionKey: string }> {
-  const response = await fetch('https://api.circle.com/v1/w3s/users/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CIRCLE_API_KEY}`
-    },
-    body: JSON.stringify({
-      userId: userId
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to create user token: ${errorText}`);
-  }
-
-  const data: CircleUserTokenResponse = await response.json();
-  return {
-    userToken: data.data.userToken,
-    encryptionKey: data.data.encryptionKey
-  };
 }
 
 async function createWallet(userId: string): Promise<CircleWalletResponse & { userToken: string; encryptionKey: string }> {
@@ -138,9 +96,9 @@ async function createWallet(userId: string): Promise<CircleWalletResponse & { us
     console.error("Circle API Error Response:", errorText);
     let error;
     try {
-        error = JSON.parse(errorText);
+      error = JSON.parse(errorText);
     } catch (e) {
-        error = { message: errorText };
+      error = { message: errorText };
     }
     const errorMessage = (error as CircleAPIError).message || `HTTP ${response.status}`;
     throw new Error(`Circle API failed to initialize wallet: ${errorMessage} - ${JSON.stringify(error)}`);
@@ -285,8 +243,8 @@ export async function GET(req: Request) {
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to list wallets: ${errorText}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to list wallets: ${errorText}`);
     }
 
     const data = await response.json();

@@ -13,7 +13,6 @@ import { SUPPORTED_ASSETS } from '@/app/config/assets';
 import { CircleWallet } from '@/app/components/CircleWallet';
 import { Header } from '@/app/components/Header';
 import { VAULT_ABI } from '@/app/config/abis';
-import { getAbsoluteUrl } from '@/app/lib/utils';
 
 // Import Lottie JSONs directly
 import loadingCoinAnimation from '@/app/assets/lottie/LoadingCoin.json';
@@ -24,6 +23,7 @@ import qrScanSuccessAnimation from '@/app/assets/lottie/QRScanSucces.json';
 interface PaymentRequestFormProps {
   merchant: {
     id: string;
+    slug: string;
     name: string;
     walletAddress: string;
     logoUrl?: string | null;
@@ -35,12 +35,14 @@ interface PaymentRequestFormProps {
     status: string;
     txHash?: string | null;
   };
+  paymentUrl: string;
 }
 
-export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestFormProps) {
+export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: PaymentRequestFormProps) {
   const [paymentMethod, setPaymentMethod] = useState<'vault' | 'circle'>('vault');
   const [step, setStep] = useState<'connect' | 'approve' | 'pay' | 'processing' | 'success' | 'error'>('connect');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [txType, setTxType] = useState<'approve' | 'pay' | null>(null);
 
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
@@ -80,14 +82,21 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
 
   useEffect(() => {
     if (isConfirmed) {
-      setStep('success');
+      if (txType === 'pay') {
+        setStep('success');
+      } else if (txType === 'approve') {
+        refetchAllowance();
+        setStep('pay');
+        setTxType(null);
+      }
     }
-  }, [isConfirmed]);
+  }, [isConfirmed, txType, refetchAllowance]);
 
   useEffect(() => {
     if (writeError) {
       setStep('error');
       setErrorMsg(writeError.message || 'Transaction failed');
+      setTxType(null);
     }
   }, [writeError]);
 
@@ -104,6 +113,7 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
 
   const handleApprove = () => {
     try {
+      setTxType('approve');
       writeContract({
         address: asset.address as `0x${string}`,
         abi: erc20Abi,
@@ -112,11 +122,13 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
       });
     } catch (e) {
       console.error(e);
+      setTxType(null);
     }
   };
 
   const handlePay = () => {
     try {
+      setTxType('pay');
       writeContract({
         address: asset.vaultAddress as `0x${string}`,
         abi: VAULT_ABI,
@@ -125,6 +137,7 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
       });
     } catch (e) {
       console.error(e);
+      setTxType(null);
     }
   };
 
@@ -134,8 +147,14 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full text-center p-8">
           <LottieAnimation animationData={loadingCoinAnimation} height={200} className="mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-zinc-900 mb-2">Processing Payment</h2>
-          <p className="text-zinc-500 mb-4">Please wait while the transaction confirms on Arc Testnet.</p>
+          <h2 className="text-xl font-bold text-zinc-900 mb-2">
+            {txType === 'approve' ? 'Approving Token' : 'Processing Payment'}
+          </h2>
+          <p className="text-zinc-500 mb-4">
+            {txType === 'approve' 
+              ? 'Please wait while the approval confirms on Arc Testnet.' 
+              : 'Please wait while the transaction confirms on Arc Testnet.'}
+          </p>
           {hash && <TruncatedHash hash={hash} externalLink={`https://testnet.arcscan.app/tx/${hash}`} />}
         </Card>
       </div>
@@ -170,9 +189,11 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full text-center p-8">
           <LottieAnimation animationData={errorAnimation} loop={false} height={150} className="mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-red-600 mb-2">Payment Failed</h2>
+          <h2 className="text-xl font-bold text-red-600 mb-2">
+             {txType === 'approve' ? 'Approval Failed' : 'Payment Failed'}
+          </h2>
           <p className="text-zinc-500 mb-6">{errorMsg}</p>
-          <Button className="w-full" onClick={() => setStep('pay')}>
+          <Button className="w-full" onClick={() => setStep(txType === 'approve' ? 'approve' : 'pay')}>
             Try Again
           </Button>
         </Card>
@@ -237,23 +258,38 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
                     Connect Wallet
                   </Button>
                 ) : step === 'approve' ? (
-                  <Button 
-                    className="w-full" 
-                    size="lg" 
-                    onClick={handleApprove}
-                    isLoading={isPending || isConfirming}
-                  >
-                    {isPending || isConfirming ? 'Approving...' : `Approve ${asset.symbol}`}
-                  </Button>
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">
+                        <span>Step 1 of 2</span>
+                        <span>Approve Token</span>
+                    </div>
+                    <Button 
+                        className="w-full" 
+                        size="lg" 
+                        onClick={handleApprove}
+                        isLoading={isPending || isConfirming}
+                    >
+                        {isPending || isConfirming ? 'Approving...' : `Approve ${asset.symbol}`}
+                    </Button>
+                    <p className="text-xs text-center text-zinc-400 mt-2">
+                        You must approve the vault to spend your {asset.symbol} before paying.
+                    </p>
+                  </div>
                 ) : (
-                  <Button 
-                    className="w-full" 
-                    size="lg" 
-                    onClick={handlePay}
-                    isLoading={isPending || isConfirming}
-                  >
-                    {isPending || isConfirming ? 'Processing...' : `Pay Now`}
-                  </Button>
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">
+                        <span>Step 2 of 2</span>
+                        <span>Confirm Payment</span>
+                    </div>
+                    <Button 
+                        className="w-full" 
+                        size="lg" 
+                        onClick={handlePay}
+                        isLoading={isPending || isConfirming}
+                    >
+                        {isPending || isConfirming ? 'Processing...' : `Pay Now`}
+                    </Button>
+                  </div>
                 )}
                 
                 {balanceValue !== undefined && balanceValue !== null && (
@@ -266,7 +302,8 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
               <CircleWallet 
                 onPay={() => setStep('success')} 
                 amount={paymentRequest.amount} 
-                symbol={asset.symbol} 
+                symbol={asset.symbol}
+                recipientAddress={merchant.walletAddress}
               />
             )}
 
@@ -274,7 +311,7 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
             <div className="border-t border-zinc-100 pt-6 text-center">
                <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Or Scan to Pay</div>
                <div className="bg-white p-3 rounded-xl shadow-sm border border-zinc-100 inline-block">
-                 <QRCodeSVG value={getAbsoluteUrl(typeof window !== 'undefined' ? window.location.pathname : '')} size={120} />
+                 <QRCodeSVG value={paymentUrl} size={120} />
                </div>
             </div>
           </div>
