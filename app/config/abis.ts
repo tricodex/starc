@@ -1,12 +1,23 @@
 export const VAULT_ABI = [
+    // Standard ERC4626
     {
         name: 'deposit',
         type: 'function',
         stateMutability: 'nonpayable',
         inputs: [
-            { name: 'asset', type: 'address' },
             { name: 'assets', type: 'uint256' },
             { name: 'receiver', type: 'address' }
+        ],
+        outputs: [{ name: 'shares', type: 'uint256' }]
+    },
+    {
+        name: 'withdraw',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'assets', type: 'uint256' },
+            { name: 'receiver', type: 'address' },
+            { name: 'owner', type: 'address' }
         ],
         outputs: [{ name: 'shares', type: 'uint256' }]
     },
@@ -25,20 +36,59 @@ export const VAULT_ABI = [
         outputs: [{ name: '', type: 'uint256' }]
     },
     {
-        name: 'assetConfig',
+        name: 'asset',
         type: 'function',
         stateMutability: 'view',
-        inputs: [{ name: 'asset', type: 'address' }],
-        outputs: [
-            { name: 'isSupported', type: 'bool' },
-            { name: 'oracle', type: 'address' },
-            { name: 'tokenDecimals', type: 'uint8' },
-            { name: 'oracleDecimals', type: 'uint8' },
-            { name: 'dailyDepositLimit', type: 'uint256' },
-            { name: 'dailyDeposited', type: 'uint256' },
-            { name: 'lastResetTimestamp', type: 'uint256' },
-            { name: 'minPrice', type: 'int256' },
-            { name: 'maxPrice', type: 'int256' }
-        ]
+        inputs: [],
+        outputs: [{ name: '', type: 'address' }]
+    },
+    // Custom V2
+    {
+        name: 'pause',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [],
+        outputs: []
+    },
+    {
+        name: 'unpause',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [],
+        outputs: []
+    },
+    {
+        name: 'setFees',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'depositFeeBps', type: 'uint256' },
+            { name: 'withdrawFeeBps', type: 'uint256' }
+        ],
+        outputs: []
+    },
+    // Events
+    {
+        anonymous: false,
+        inputs: [
+            { indexed: true, name: 'sender', type: 'address' },
+            { indexed: true, name: 'owner', type: 'address' },
+            { indexed: false, name: 'assets', type: 'uint256' },
+            { indexed: false, name: 'shares', type: 'uint256' }
+        ],
+        name: 'Deposit',
+        type: 'event'
+    },
+    {
+        anonymous: false,
+        inputs: [
+            { indexed: true, name: 'sender', type: 'address' },
+            { indexed: true, name: 'receiver', type: 'address' },
+            { indexed: true, name: 'owner', type: 'address' },
+            { indexed: false, name: 'assets', type: 'uint256' },
+            { indexed: false, name: 'shares', type: 'uint256' }
+        ],
+        name: 'Withdraw',
+        type: 'event'
     }
 ] as const;

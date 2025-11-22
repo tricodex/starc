@@ -68,11 +68,12 @@ export function DepositForm() {
           args: [asset.vaultAddress as `0x${string}`, parseUnits(amount, asset.decimals)],
         });
       } else {
+        // V2: deposit(amount, receiver) - Single Asset
         await writeContract({
           address: asset.vaultAddress as `0x${string}`,
           abi: VAULT_ABI,
           functionName: 'deposit',
-          args: [asset.address as `0x${string}`, parseUnits(amount, asset.decimals), address],
+          args: [parseUnits(amount, asset.decimals), address],
         });
       }
     } catch (e: any) {
@@ -90,12 +91,6 @@ export function DepositForm() {
   ];
   
   const currentStepIndex = steps.findIndex(s => s.id === (step === 'input' ? 'input' : step));
-  // If step is 'deposit' but we are just inputting, it's index 0. 
-  // Actually, 'deposit' state means ready to deposit.
-  // Let's simplify: 
-  // Input -> Approve (if needed) -> Mint
-  // If allowance exists, we skip approve visually? Or show it as done?
-  // Let's show all 3.
   
   const getStepStatus = (index: number) => {
     if (step === 'input') return index === 0 ? 'current' : 'upcoming';
@@ -107,8 +102,8 @@ export function DepositForm() {
   return (
     <Card className="h-full flex flex-col">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-zinc-900 font-display">Unified Vault Deposit</h2>
-        <p className="text-sm text-zinc-500">Deposit supported stablecoins to mint uTokens.</p>
+        <h2 className="text-xl font-bold text-zinc-900 font-display">Safe Yield Vault (USDC)</h2>
+        <p className="text-sm text-zinc-500">Deposit USDC to earn yield. V2 Architecture.</p>
       </div>
 
       {/* Transaction Stepper */}
@@ -145,21 +140,27 @@ export function DepositForm() {
         <div>
           <label className="block text-sm font-medium text-zinc-700 mb-3">Select Asset</label>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-            {(Object.keys(SUPPORTED_ASSETS) as Array<keyof typeof SUPPORTED_ASSETS>).map((assetKey) => (
-              <button
-                key={assetKey}
-                onClick={() => setSelectedAsset(assetKey)}
-                className={`
-                  flex flex-col items-center justify-center p-3 rounded-xl border transition-all
-                  ${selectedAsset === assetKey 
-                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
-                    : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50'}
-                `}
-              >
-                <span className="font-bold text-lg">{SUPPORTED_ASSETS[assetKey].symbol}</span>
-                <span className="text-[10px] opacity-70">{SUPPORTED_ASSETS[assetKey].name}</span>
-              </button>
-            ))}
+            {(Object.keys(SUPPORTED_ASSETS) as Array<keyof typeof SUPPORTED_ASSETS>).map((assetKey) => {
+              const isSupported = assetKey === 'USDC';
+              return (
+                <button
+                  key={assetKey}
+                  onClick={() => isSupported && setSelectedAsset(assetKey)}
+                  disabled={!isSupported}
+                  className={`
+                    flex flex-col items-center justify-center p-3 rounded-xl border transition-all
+                    ${selectedAsset === assetKey 
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
+                      : isSupported 
+                        ? 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50'
+                        : 'bg-zinc-50 border-zinc-100 text-zinc-300 cursor-not-allowed opacity-60'}
+                  `}
+                >
+                  <span className="font-bold text-lg">{SUPPORTED_ASSETS[assetKey].symbol}</span>
+                  <span className="text-[10px] opacity-70">{isSupported ? SUPPORTED_ASSETS[assetKey].name : 'Migrating to V2'}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -188,7 +189,7 @@ export function DepositForm() {
         <div className="space-y-4">
           <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-zinc-200 shadow-sm">
             <div className="text-sm text-zinc-500">Exchange Rate</div>
-            <div className="font-mono font-medium text-zinc-900">1 {asset.symbol} ≈ 1.00 uARS</div>
+            <div className="font-mono font-medium text-zinc-900">1 {asset.symbol} = 1.00 u{asset.symbol}</div>
           </div>
           
           {writeError && (

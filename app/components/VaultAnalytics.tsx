@@ -27,25 +27,17 @@ export function VaultAnalytics() {
     functionName: 'totalSupply',
   });
 
-  // 3. Asset Config (for Daily Limit of USDC)
-  const { data: assetConfig } = useReadContract({
-    address: vaultAddress,
-    abi: VAULT_ABI,
-    functionName: 'assetConfig',
-    args: [usdcAddress],
-  });
+  // 3. Vault Type (Static for V2)
+  const vaultType = "Single Asset (USDC)";
 
   // Calculations
   const totalAssetsNum = totalAssets ? parseFloat(formatUnits(totalAssets, 18)) : 0;
   const totalSupplyNum = totalSupply ? parseFloat(formatUnits(totalSupply, 18)) : 0;
   
   // Collateralization Ratio = Total Assets / Total Supply
+  // In V2 (ERC4626), 1 share = 1 asset usually, unless fees/yield.
+  // If totalAssets > totalSupply, it means yield.
   const collatRatio = totalSupplyNum > 0 ? (totalAssetsNum / totalSupplyNum) * 100 : 100;
-
-  // Daily Limit Usage
-  const dailyLimit = assetConfig ? parseFloat(formatUnits(assetConfig[4], 18)) : 0; // index 4 is dailyDepositLimit
-  const dailyDeposited = assetConfig ? parseFloat(formatUnits(assetConfig[5], 18)) : 0; // index 5 is dailyDeposited
-  const limitUsage = dailyLimit > 0 ? (dailyDeposited / dailyLimit) * 100 : 0;
 
   return (
     <Card className="border-zinc-200">
@@ -67,9 +59,9 @@ export function VaultAnalytics() {
         </div>
 
         <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
-          <div className="text-xs text-zinc-500 mb-1">Daily Limit (USDC)</div>
+          <div className="text-xs text-zinc-500 mb-1">Vault Type</div>
           <div className="text-lg font-bold text-indigo-600">
-            {limitUsage.toFixed(1)}%
+            Safe V2
           </div>
         </div>
 
