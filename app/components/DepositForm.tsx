@@ -10,12 +10,12 @@ import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 
 export function DepositForm() {
-  const [selectedAsset, setSelectedAsset] = useState<keyof typeof SUPPORTED_ASSETS>('USDC');
+  const [selectedAsset, setSelectedAsset] = useState<keyof typeof SUPPORTED_ASSETS>('Native USDC');
   const [amount, setAmount] = useState('');
   const [step, setStep] = useState<'input' | 'approve' | 'deposit'>('input');
   
   const { address, isConnected } = useAccount();
-  const asset = SUPPORTED_ASSETS[selectedAsset];
+  const asset = SUPPORTED_ASSETS[selectedAsset] || SUPPORTED_ASSETS['mUSDC']; // Fallback
 
   // Contract Writes
   const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
@@ -141,7 +141,7 @@ export function DepositForm() {
           <label className="block text-sm font-medium text-zinc-700 mb-3">Select Asset</label>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
             {(Object.keys(SUPPORTED_ASSETS) as Array<keyof typeof SUPPORTED_ASSETS>).map((assetKey) => {
-              const isSupported = assetKey === 'USDC';
+              const isSupported = assetKey === 'Native USDC';
               return (
                 <button
                   key={assetKey}

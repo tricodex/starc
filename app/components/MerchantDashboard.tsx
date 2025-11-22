@@ -17,11 +17,11 @@ export function MerchantDashboard() {
   const { walletId } = useCircleWallet();
   const { address } = useAccount();
 
-  const usdcConfig = SUPPORTED_ASSETS.USDC;
+  const usdcConfig = SUPPORTED_ASSETS['Native USDC'] || SUPPORTED_ASSETS['mUSDC'];
 
   // 1. Read USDC Balance (Operational Float)
   const { data: usdcBalanceData } = useReadContract({
-    address: usdcConfig.address,
+    address: usdcConfig.address as `0x${string}`,
     abi: erc20Abi,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
@@ -30,7 +30,7 @@ export function MerchantDashboard() {
 
   // 2. Read Vault Shares
   const { data: vaultShares } = useReadContract({
-    address: usdcConfig.vaultAddress,
+    address: usdcConfig.vaultAddress as `0x${string}`,
     abi: erc4626Abi,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
@@ -39,7 +39,7 @@ export function MerchantDashboard() {
 
   // 3. Convert Shares to Assets (Vault Savings)
   const { data: vaultAssetsData } = useReadContract({
-    address: usdcConfig.vaultAddress,
+    address: usdcConfig.vaultAddress as `0x${string}`,
     abi: erc4626Abi,
     functionName: 'convertToAssets',
     args: vaultShares ? [vaultShares] : undefined,

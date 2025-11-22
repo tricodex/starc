@@ -48,7 +48,7 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
   // Asset Data (Fixed to USDC for now based on schema default)
-  const asset = SUPPORTED_ASSETS['USDC'];
+  const asset = SUPPORTED_ASSETS['mUSDC'];
   
   // Balance Check
   const { data: balanceValue } = useReadContract({

@@ -10,8 +10,9 @@ import { VAULT_ABI } from '../config/abis';
 export function VaultAnalytics() {
   // ... existing hooks ...
   // Use the first asset's vault address as the main vault (they should be the same for Unified Vault)
-  const vaultAddress = SUPPORTED_ASSETS['USDC'].vaultAddress as `0x${string}`;
-  const usdcAddress = SUPPORTED_ASSETS['USDC'].address as `0x${string}`;
+  // Fallback to a safe default if the key is missing during initial render/config updates
+  const vaultAddress = (SUPPORTED_ASSETS['Native USDC']?.vaultAddress || SUPPORTED_ASSETS['mUSDC']?.vaultAddress) as `0x${string}`;
+  const usdcAddress = (SUPPORTED_ASSETS['Native USDC']?.address || SUPPORTED_ASSETS['mUSDC']?.address) as `0x${string}`;
 
   // 1. Total Assets
   const { data: totalAssets } = useReadContract({

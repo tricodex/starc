@@ -7,7 +7,7 @@ import "../src/MockStable.sol";
 contract FundMockARS is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address fundRecipient = 0xeFE5b15B606915D607959d21880769e9d269A99d;
+        address fundRecipient = 0xB62f2Aaa2618c5EebD7624DC927EAa05659b26D1;
 
         vm.startBroadcast(deployerPrivateKey);
 
