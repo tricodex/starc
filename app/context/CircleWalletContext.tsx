@@ -6,6 +6,7 @@ import { W3SSdk } from '@circle-fin/w3s-pw-web-sdk';
 interface CircleWalletContextType {
   sdk: W3SSdk | null;
   walletId: string | null;
+  walletAddress: string | null;
   isConnected: boolean;
   isLoading: boolean;
   createWallet: () => Promise<void>;
@@ -17,6 +18,7 @@ const CircleWalletContext = createContext<CircleWalletContextType | undefined>(u
 export function CircleWalletProvider({ children }: { children: ReactNode }) {
   const [sdk, setSdk] = useState<W3SSdk | null>(null);
   const [walletId, setWalletId] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export function CircleWalletProvider({ children }: { children: ReactNode }) {
         });
 
         // 3. Execute Challenge with SDK (User sets PIN)
-        sdk.execute(challengeId, (error, result) => {
+        sdk.execute(challengeId, async (error, result) => {
           if (error) {
             console.error("SDK Error:", error);
             alert("Failed to create wallet: " + error.message);
@@ -76,10 +78,44 @@ export function CircleWalletProvider({ children }: { children: ReactNode }) {
           }
 
           if (result) {
-            console.log("Wallet Created:", result);
-            const resData = result as any;
-            setWalletId(resData.data?.walletId);
-            setIsLoading(false);
+            console.log("Challenge Completed:", result);
+            
+            // Poll for wallet creation
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            const pollWallet = async () => {
+              try {
+                const walletResponse = await fetch(`/api/circle/wallet?userId=${userId}`);
+                const walletData = await walletResponse.json();
+                const wallets = walletData.data?.wallets;
+                
+                if (wallets && wallets.length > 0) {
+                  const wallet = wallets[0];
+                  console.log("Fetched Wallet:", wallet);
+                  setWalletId(wallet.id);
+                  setWalletAddress(wallet.address);
+                  setIsLoading(false);
+                } else if (attempts < maxAttempts) {
+                  attempts++;
+                  console.log(`Wallet not ready yet, retrying... (${attempts}/${maxAttempts})`);
+                  setTimeout(pollWallet, 2000); // Retry every 2 seconds
+                } else {
+                  console.warn("Wallet initialized but no wallet ID returned after polling");
+                   // Fallback: try to use result data if available
+                  const resData = result as any;
+                  if (resData.data?.walletId) {
+                     setWalletId(resData.data.walletId);
+                  }
+                  setIsLoading(false);
+                }
+              } catch (err) {
+                console.error("Failed to fetch wallet info:", err);
+                setIsLoading(false);
+              }
+            };
+
+            pollWallet();
           }
         });
       } else {
@@ -94,12 +130,14 @@ export function CircleWalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = () => {
     setWalletId(null);
+    setWalletAddress(null);
   };
 
   return (
     <CircleWalletContext.Provider value={{
       sdk,
       walletId,
+      walletAddress,
       isConnected: !!walletId,
       isLoading,
       createWallet,

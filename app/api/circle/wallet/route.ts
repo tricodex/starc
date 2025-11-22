@@ -12,7 +12,6 @@ const CreateChallengeRequestSchema = z.object({
 // Environment variables with validation
 const CIRCLE_API_KEY = process.env.CIRCLE_API_KEY;
 const APP_ID = process.env.NEXT_PUBLIC_CIRCLE_APP_ID;
-const WALLET_SET_ID = process.env.CIRCLE_WALLET_SET_ID;
 
 // Check critical environment variables at module load
 if (!CIRCLE_API_KEY) {
@@ -34,32 +33,17 @@ interface CircleUser {
   updateDate: string;
 }
 
-interface CircleWallet {
-  id: string;
-  state: string;
-  walletSetId: string;
-  custodyType: string;
-  userId: string;
-  address?: string;
-  blockchain: string;
-  accountType: string;
-  updateDate: string;
-  createDate: string;
-}
-
 interface CircleWalletResponse {
   data?: {
     challengeId?: string;
-    wallets?: CircleWallet[];
   };
 }
 
-interface CircleInitializeResponse {
+interface CircleUserTokenResponse {
   data: {
-    challengeId: string;
+    userToken: string;
+    encryptionKey: string;
   };
-  userToken: string;
-  encryptionKey: string;
 }
 
 async function createUser(userId: string): Promise<CircleUser> {
@@ -80,6 +64,11 @@ async function createUser(userId: string): Promise<CircleUser> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    // If user already exists (409), we can proceed
+    if (response.status === 409) {
+      console.log(`User ${userId} already exists.`);
+      return { id: userId, status: 'EXISTING', createDate: '', updateDate: '' };
+    }
     const errorMessage = (error as CircleAPIError).message || `HTTP ${response.status}`;
     throw new Error(`Circle API failed to create user: ${errorMessage}`);
   }
@@ -88,14 +77,7 @@ async function createUser(userId: string): Promise<CircleUser> {
   return data.data;
 }
 
-interface CircleUserTokenResponse {
-  data: {
-    userToken: string;
-    encryptionKey: string;
-  };
-}
-
-async function createUserToken(userId: string): Promise<string> {
+async function createUserToken(userId: string): Promise<{ userToken: string; encryptionKey: string }> {
   const response = await fetch('https://api.circle.com/v1/w3s/users/token', {
     method: 'POST',
     headers: {
@@ -113,52 +95,34 @@ async function createUserToken(userId: string): Promise<string> {
   }
 
   const data: CircleUserTokenResponse = await response.json();
-  return data.data.userToken;
+  return {
+    userToken: data.data.userToken,
+    encryptionKey: data.data.encryptionKey
+  };
 }
 
-async function createWallet(userId: string): Promise<CircleInitializeResponse> {
+async function createWallet(userId: string): Promise<CircleWalletResponse & { userToken: string; encryptionKey: string }> {
   if (!CIRCLE_API_KEY) {
     throw new Error("Circle API key not configured");
   }
 
-  // Generate a fresh user token and encryption key for this request
-  const tokenResponse = await fetch('https://api.circle.com/v1/w3s/users/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CIRCLE_API_KEY}`
-    },
-    body: JSON.stringify({
-      userId: userId
-    })
-  });
-
-  if (!tokenResponse.ok) {
-    const errorText = await tokenResponse.text();
-    throw new Error(`Failed to create user token: ${errorText}`);
-  }
-
-  const tokenData: CircleUserTokenResponse = await tokenResponse.json();
-  const { userToken, encryptionKey } = tokenData.data;
+  // Generate a fresh user token and encryption key
+  const { userToken, encryptionKey } = await createUserToken(userId);
 
   // Prepare wallet initialization payload
-  // Use /user/initialize instead of /user/wallets for first-time PIN setup + wallet creation
   const payload: {
     idempotencyKey: string;
-    userToken: string;
     blockchains: string[];
     accountType: string;
   } = {
     idempotencyKey: uuidv4(),
-    userToken: userToken,
-    // Use MATIC-AMOY for testing since ARC-TESTNET may not be fully supported yet
-    blockchains: ['MATIC-AMOY'],
-    accountType: 'SCA' // Smart Contract Account
+    blockchains: ['ARC-TESTNET'],
+    accountType: 'SCA'
   };
 
-  console.log("Initializing user wallet with payload:", JSON.stringify(payload, null, 2));
+  console.log("Initializing user wallet with payload:", JSON.stringify({ ...payload, userToken: '[REDACTED]' }, null, 2));
 
-  // CRITICAL: userToken must be passed as X-User-Token header, NOT in request body
+  // Use /user/initialize for first-time setup
   const response = await fetch('https://api.circle.com/v1/w3s/user/initialize', {
     method: 'POST',
     headers: {
@@ -166,11 +130,7 @@ async function createWallet(userId: string): Promise<CircleInitializeResponse> {
       'Authorization': `Bearer ${CIRCLE_API_KEY}`,
       'X-User-Token': userToken
     },
-    body: JSON.stringify({
-      idempotencyKey: payload.idempotencyKey,
-      blockchains: payload.blockchains,
-      accountType: payload.accountType
-    })
+    body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
@@ -193,29 +153,21 @@ async function createWallet(userId: string): Promise<CircleInitializeResponse> {
     throw new Error("Circle API returned invalid response: missing challengeId");
   }
 
-  // Return challengeId, userToken, and encryptionKey for SDK authentication
   return {
-    data: {
-      challengeId: data.data.challengeId
-    },
+    ...data,
     userToken,
     encryptionKey
   };
 }
 
-async function createChallenge(userId: string): Promise<CircleInitializeResponse> {
-  // 1. Create User (idempotent - Circle handles duplicates)
-  try {
-    await createUser(userId);
-  } catch (error) {
-    // If user already exists, Circle returns 409 which is fine
-    console.log(`User ${userId} may already exist, continuing...`);
-  }
+async function createChallenge(userId: string): Promise<CircleWalletResponse & { userToken: string; encryptionKey: string }> {
+  // 1. Create User (idempotent logic handled inside createUser)
+  await createUser(userId);
 
   // 2. Initialize Wallet (returns challengeId, userToken, encryptionKey)
-  const initializeResponse = await createWallet(userId);
+  const walletResponse = await createWallet(userId);
 
-  return initializeResponse;
+  return walletResponse;
 }
 
 export async function POST(req: Request) {
@@ -308,5 +260,39 @@ export async function POST(req: Request) {
       { error: "Failed to process request. Please try again." },
       { status: 500 }
     );
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+    }
+
+    // We need a fresh user token to list wallets
+    const { userToken } = await createUserToken(userId);
+
+    const response = await fetch('https://api.circle.com/v1/w3s/wallets', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CIRCLE_API_KEY}`,
+        'X-User-Token': userToken
+      }
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to list wallets: ${errorText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Circle API GET Error:", error);
+    return NextResponse.json({ error: "Failed to fetch wallets" }, { status: 500 });
   }
 }

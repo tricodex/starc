@@ -7,8 +7,9 @@ import { useState, useEffect } from 'react';
 import { useCircleWallet } from '../context/CircleWalletContext';
 
 export function Header() {
-  const { isConnected, walletId, createWallet, disconnect, isLoading } = useCircleWallet();
+  const { isConnected, walletId, walletAddress, createWallet, disconnect, isLoading } = useCircleWallet();
   const [mounted, setMounted] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -16,6 +17,14 @@ export function Header() {
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  const copyToClipboard = async () => {
+    if (walletAddress) {
+      await navigator.clipboard.writeText(walletAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -37,11 +46,20 @@ export function Header() {
         <div className="flex items-center gap-4">
           {mounted && isConnected && walletId ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100">
+              <div 
+                className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 cursor-pointer hover:bg-indigo-100 transition-colors relative group"
+                onClick={copyToClipboard}
+                title="Click to copy address"
+              >
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                 <span className="text-sm text-indigo-700 font-mono">
-                  {formatAddress(walletId)}
+                  {walletAddress ? formatAddress(walletAddress) : formatAddress(walletId)}
                 </span>
+                
+                {/* Tooltip */}
+                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                  {copied ? 'Copied!' : 'Copy Address'}
+                </div>
               </div>
               <Button 
                 variant="secondary" 
