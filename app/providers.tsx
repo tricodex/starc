@@ -22,6 +22,7 @@ const config = createConfig({
   connectors: [
     injected(),
   ],
+  ssr: true,
   transports: {
     [arcTestnet.id]: http(),
   },

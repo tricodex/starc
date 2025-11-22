@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { SUPPORTED_ASSETS } from '../config/assets';
+import { Header } from '../components/Header';
 
 export default function AdminPage() {
   const [isPaused, setIsPaused] = useState(false);
@@ -12,18 +13,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      <header className="bg-white border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Starc Logo" width={32} height={32} className="rounded-lg" />
-            <span className="font-display text-xl font-bold text-zinc-900">starc admin</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-500">Logged in as Risk Manager</span>
-            <div className="w-8 h-8 bg-zinc-200 rounded-full"></div>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-8">

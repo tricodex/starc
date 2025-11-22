@@ -1,24 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "./components/ui/Card";
+import { Header } from './components/Header';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
-      {/* Navigation Bar */}
-      <nav className="border-b border-zinc-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Starc Logo" width={32} height={32} className="rounded-lg" />
-            <span className="text-xl font-bold text-zinc-900 font-display tracking-tight">starc</span>
-          </div>
-          <div className="flex items-center gap-6 text-sm font-medium text-zinc-600">
-            <Link href="/demo" className="hover:text-indigo-600 transition-colors">Vaults</Link>
-            <Link href="/admin" className="hover:text-indigo-600 transition-colors">Governance</Link>
-            <a href="https://docs.arc.network" target="_blank" className="hover:text-indigo-600 transition-colors">Docs</a>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-zinc-50">
+      <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         {/* Hero Section */}
