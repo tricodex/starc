@@ -45,3 +45,4 @@ internal-docs
 *.md
 notes.md
 rules/
+/app/generated/prisma
