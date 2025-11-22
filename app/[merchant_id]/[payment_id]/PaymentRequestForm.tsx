@@ -13,6 +13,7 @@ import { SUPPORTED_ASSETS } from '@/app/config/assets';
 import { CircleWallet } from '@/app/components/CircleWallet';
 import { Header } from '@/app/components/Header';
 import { VAULT_ABI } from '@/app/config/abis';
+import { getAbsoluteUrl } from '@/app/lib/utils';
 
 // Import Lottie JSONs directly
 import loadingCoinAnimation from '@/app/assets/lottie/LoadingCoin.json';
@@ -40,7 +41,6 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
   const [paymentMethod, setPaymentMethod] = useState<'vault' | 'circle'>('vault');
   const [step, setStep] = useState<'connect' | 'approve' | 'pay' | 'processing' | 'success' | 'error'>('connect');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showQR, setShowQR] = useState(false);
 
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
@@ -186,115 +186,98 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
       
       <div className="flex items-center justify-center p-4 min-h-[calc(100vh-64px)]">
         <Card className="max-w-md w-full relative overflow-hidden">
-          {/* QR Code Toggle */}
-          <button 
-          title='Show QR Code'
-            onClick={() => setShowQR(!showQR)}
-            className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-indigo-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zm-6 0H6.414a1 1 0 00-.707.293L4.293 16.707A1 1 0 004 17.414V19a1 1 0 001 1h2.586a1 1 0 00.707-.293l1.414-1.414a1 1 0 00.293-.707V16a1 1 0 00-1-1z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 3v4a1 1 0 001 1h4a1 1 0 001-1V3a1 1 0 00-1-1h-4a1 1 0 00-1 1zm4 10a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4a1 1 0 011-1h4z" />
-            </svg>
-          </button>
-
-          {showQR ? (
-            <div className="text-center py-8 animate-in fade-in zoom-in duration-300">
-              <h3 className="text-lg font-bold text-zinc-900 mb-6">Scan to Pay</h3>
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-zinc-100 inline-block mb-6">
-                <QRCodeSVG value={typeof window !== 'undefined' ? window.location.href : ''} size={200} />
-              </div>
-              <p className="text-sm text-zinc-500 mb-6">Scan with your mobile wallet</p>
-              <Button variant="secondary" onClick={() => setShowQR(false)}>Back to Payment</Button>
+          <div className="text-center mb-8">
+            {merchant.logoUrl && (
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden bg-white shadow-sm border border-zinc-100">
+                    <img src={merchant.logoUrl} alt={merchant.name} className="w-full h-full object-cover" />
+                </div>
+            )}
+            <h1 className="text-xl font-bold text-zinc-900 font-display">{merchant.name}</h1>
+            <div className="mt-2 text-xs text-zinc-400 font-mono bg-zinc-50 inline-block px-2 py-1 rounded">
+                <TruncatedHash hash={merchant.walletAddress} showCopy={true} />
             </div>
-          ) : (
-            <>
-              <div className="text-center mb-8">
-                {merchant.logoUrl && (
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden bg-white shadow-sm border border-zinc-100">
-                        <img src={merchant.logoUrl} alt={merchant.name} className="w-full h-full object-cover" />
-                    </div>
-                )}
-                <h1 className="text-xl font-bold text-zinc-900 font-display">{merchant.name}</h1>
-                <div className="mt-2 text-xs text-zinc-400 font-mono bg-zinc-50 inline-block px-2 py-1 rounded">
-                    <TruncatedHash hash={merchant.walletAddress} showCopy={true} />
-                </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-zinc-50 p-6 rounded-xl border border-zinc-100 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-emerald-500"></div>
+              <div className="text-sm text-zinc-500 mb-1">Total Amount</div>
+              <div className="text-4xl font-bold text-zinc-900 tracking-tight">
+                $ {paymentRequest.amount}
               </div>
+              <div className="text-xs font-medium text-indigo-600 mt-2 bg-indigo-50 inline-block px-2 py-0.5 rounded-full">
+                {asset.symbol}
+              </div>
+            </div>
 
-              <div className="space-y-6">
-                <div className="bg-zinc-50 p-6 rounded-xl border border-zinc-100 text-center relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-emerald-500"></div>
-                  <div className="text-sm text-zinc-500 mb-1">Total Amount</div>
-                  <div className="text-4xl font-bold text-zinc-900 tracking-tight">
-                    $ {paymentRequest.amount}
-                  </div>
-                  <div className="text-xs font-medium text-indigo-600 mt-2 bg-indigo-50 inline-block px-2 py-0.5 rounded-full">
-                    {asset.symbol}
-                  </div>
-                </div>
+            {/* Payment Method Toggle */}
+            <div className="flex p-1 bg-zinc-100 rounded-xl">
+              <button
+                onClick={() => setPaymentMethod('vault')}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                  paymentMethod === 'vault' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-900'
+                }`}
+              >
+                Unified Vault
+              </button>
+              <button
+                onClick={() => setPaymentMethod('circle')}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                  paymentMethod === 'circle' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-900'
+                }`}
+              >
+                Circle Wallet
+              </button>
+            </div>
 
-                {/* Payment Method Toggle */}
-                <div className="flex p-1 bg-zinc-100 rounded-xl">
-                  <button
-                    onClick={() => setPaymentMethod('vault')}
-                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                      paymentMethod === 'vault' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-900'
-                    }`}
+            {paymentMethod === 'vault' ? (
+              <div className="space-y-4">
+                {!isConnected ? (
+                  <Button className="w-full" size="lg" onClick={handleConnect}>
+                    Connect Wallet
+                  </Button>
+                ) : step === 'approve' ? (
+                  <Button 
+                    className="w-full" 
+                    size="lg" 
+                    onClick={handleApprove}
+                    isLoading={isPending || isConfirming}
                   >
-                    Unified Vault
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('circle')}
-                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                      paymentMethod === 'circle' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-900'
-                    }`}
-                  >
-                    Circle Wallet
-                  </button>
-                </div>
-
-                {paymentMethod === 'vault' ? (
-                  <div className="space-y-4">
-                    {!isConnected ? (
-                      <Button className="w-full" size="lg" onClick={handleConnect}>
-                        Connect Wallet
-                      </Button>
-                    ) : step === 'approve' ? (
-                      <Button 
-                        className="w-full" 
-                        size="lg" 
-                        onClick={handleApprove}
-                        isLoading={isPending || isConfirming}
-                      >
-                        {isPending || isConfirming ? 'Approving...' : `Approve ${asset.symbol}`}
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="w-full" 
-                        size="lg" 
-                        onClick={handlePay}
-                        isLoading={isPending || isConfirming}
-                      >
-                        {isPending || isConfirming ? 'Processing...' : `Pay Now`}
-                      </Button>
-                    )}
-                    
-                    {balanceValue !== undefined && balanceValue !== null && (
-                      <div className="text-center text-xs text-zinc-400">
-                        Balance: {formatUnits(balanceValue, asset.decimals)} {asset.symbol}
-                      </div>
-                    )}
-                  </div>
+                    {isPending || isConfirming ? 'Approving...' : `Approve ${asset.symbol}`}
+                  </Button>
                 ) : (
-                  <CircleWallet 
-                    onPay={() => setStep('success')} 
-                    amount={paymentRequest.amount} 
-                    symbol={asset.symbol} 
-                  />
+                  <Button 
+                    className="w-full" 
+                    size="lg" 
+                    onClick={handlePay}
+                    isLoading={isPending || isConfirming}
+                  >
+                    {isPending || isConfirming ? 'Processing...' : `Pay Now`}
+                  </Button>
+                )}
+                
+                {balanceValue !== undefined && balanceValue !== null && (
+                  <div className="text-center text-xs text-zinc-400">
+                    Balance: {formatUnits(balanceValue, asset.decimals)} {asset.symbol}
+                  </div>
                 )}
               </div>
-            </>
-          )}
+            ) : (
+              <CircleWallet 
+                onPay={() => setStep('success')} 
+                amount={paymentRequest.amount} 
+                symbol={asset.symbol} 
+              />
+            )}
+
+            {/* QR Code Section */}
+            <div className="border-t border-zinc-100 pt-6 text-center">
+               <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Or Scan to Pay</div>
+               <div className="bg-white p-3 rounded-xl shadow-sm border border-zinc-100 inline-block">
+                 <QRCodeSVG value={getAbsoluteUrl(typeof window !== 'undefined' ? window.location.pathname : '')} size={120} />
+               </div>
+            </div>
+          </div>
         </Card>
       </div>
     </div>

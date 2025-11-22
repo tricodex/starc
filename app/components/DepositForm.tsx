@@ -8,11 +8,13 @@ import { VAULT_ABI } from '../config/abis';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
+import { TruncatedHash } from './ui/TruncatedHash';
 
 export function DepositForm() {
   const [selectedAsset, setSelectedAsset] = useState<keyof typeof SUPPORTED_ASSETS>('Native USDC');
   const [amount, setAmount] = useState('');
   const [step, setStep] = useState<'input' | 'approve' | 'deposit'>('input');
+  const [successHash, setSuccessHash] = useState<string | null>(null);
   
   const { address, isConnected } = useAccount();
   const asset = SUPPORTED_ASSETS[selectedAsset] || SUPPORTED_ASSETS['mUSDC']; // Fallback
@@ -37,12 +39,12 @@ export function DepositForm() {
         refetchAllowance();
         setStep('deposit');
       } else if (step === 'deposit') {
+        setSuccessHash(hash || null);
         setAmount('');
         setStep('input');
-        alert('Deposit successful! You have received uTokens.');
       }
     }
-  }, [isConfirmed, step, refetchAllowance]);
+  }, [isConfirmed, step, refetchAllowance, hash]);
 
   // Check allowance on amount change
   useEffect(() => {
@@ -58,6 +60,7 @@ export function DepositForm() {
 
   const handleAction = async () => {
     if (!address) return;
+    setSuccessHash(null); // Clear previous success on new action
     
     try {
       if (step === 'approve') {
@@ -185,7 +188,7 @@ export function DepositForm() {
           </div>
         </div>
 
-        {/* Info Panel & Error */}
+        {/* Info Panel, Error & Success */}
         <div className="space-y-4">
           <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-zinc-200 shadow-sm">
             <div className="text-sm text-zinc-500">Exchange Rate</div>
@@ -201,6 +204,19 @@ export function DepositForm() {
                 <span className="font-bold block mb-1">Transaction Failed</span>
                 {writeError.message.split('\n')[0]}
               </div>
+            </div>
+          )}
+
+          {successHash && (
+            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between">
+              <div className="text-sm text-emerald-700 font-medium">
+                Deposit Successful!
+              </div>
+              <TruncatedHash 
+                hash={successHash} 
+                externalLink={`https://testnet.arcscan.app/tx/${successHash}`} 
+                className="text-emerald-600 bg-white/50 px-2 py-1 rounded"
+              />
             </div>
           )}
         </div>

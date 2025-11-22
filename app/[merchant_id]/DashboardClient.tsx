@@ -9,6 +9,7 @@ import { createPaymentRequest } from './actions';
 import Link from 'next/link';
 
 import { SUPPORTED_ASSETS } from '../config/assets';
+import { getAbsoluteUrl } from '../lib/utils';
 
 interface DashboardClientProps {
   merchant: {
@@ -127,7 +128,7 @@ export function DashboardClient({ merchant, paymentRequests }: DashboardClientPr
                         View Page
                       </Link>
                       <div className="hidden sm:block p-1 bg-white border border-zinc-100 rounded">
-                         <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/${merchant.slug}/${req.id}`} size={40} />
+                         <QRCodeSVG value={getAbsoluteUrl(`/${merchant.slug}/${req.id}`)} size={40} />
                       </div>
                     </div>
                   </div>

@@ -6,6 +6,8 @@ import { Button } from './ui/Button';
 import { useCircleWallet } from '../context/CircleWalletContext';
 import { SUPPORTED_ASSETS } from '../config/assets';
 
+import { TruncatedHash } from './ui/TruncatedHash';
+
 export function SendComponent() {
   const { walletAddress, walletId, sdk } = useCircleWallet();
   const [recipient, setRecipient] = useState('');
@@ -117,8 +119,21 @@ export function SendComponent() {
         </Button>
 
         {txId && (
-            <div className="p-3 bg-emerald-50 text-emerald-700 text-sm rounded-lg">
-                Transfer initiated! Transaction is processing.
+            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex flex-col gap-2">
+                <div className="text-sm text-emerald-700 font-medium">
+                    Transfer Initiated
+                </div>
+                {txId !== 'pending_tx_id' ? (
+                    <TruncatedHash 
+                        hash={txId} 
+                        externalLink={`https://testnet.arcscan.app/tx/${txId}`}
+                        className="text-emerald-600 bg-white/50 px-2 py-1 rounded w-fit"
+                    />
+                ) : (
+                    <div className="text-xs text-emerald-600">
+                        Processing via Circle...
+                    </div>
+                )}
             </div>
         )}
       </form>
