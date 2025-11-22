@@ -7,6 +7,7 @@ import { Card } from './ui/Card';
 interface AiAgentProps {
   balance: number;
   vaultBalance: number;
+  walletId?: string | null;
   onAction?: (action: string) => void;
 }
 
@@ -15,9 +16,9 @@ interface Message {
   content: string;
 }
 
-export function AiAgent({ balance, vaultBalance, onAction }: AiAgentProps) {
+export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentProps) {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hello! I am your Treasury Advisor. I see you have some excess operational float. Would you like me to analyze optimal yield strategies?' }
+    { role: 'assistant', content: 'Hello! I am your Starc Agent. I can help you optimize your treasury or manage your Circle Wallet.' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -65,18 +66,18 @@ export function AiAgent({ balance, vaultBalance, onAction }: AiAgentProps) {
   };
 
   return (
-    <Card className="h-[500px] flex flex-col border-indigo-100 bg-gradient-to-b from-white to-indigo-50/30">
+    <Card className="h-[600px] flex flex-col border-indigo-100 bg-gradient-to-b from-white to-indigo-50/30">
       <div className="flex items-center gap-3 mb-4 pb-4 border-b border-indigo-100">
-        <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-200">
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
+        <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-200 overflow-hidden">
+           <img src="/logo.png" alt="Starc Agent" className="w-full h-full object-cover" />
         </div>
         <div>
-          <h3 className="font-bold text-zinc-900 font-display">Starc AI Agent</h3>
+          <h3 className="font-bold text-zinc-900 font-display">Starc Agent</h3>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-xs text-zinc-500 font-medium">Online • Gemini 1.5 Flash</span>
+            <span className="text-xs text-zinc-500 font-medium">
+              {walletId ? 'Wallet Connected' : 'Online'} • Gemini 1.5 Flash
+            </span>
           </div>
         </div>
       </div>

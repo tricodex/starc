@@ -8,11 +8,12 @@ import { Input } from './ui/Input';
 
 interface CircleWalletProps {
   onPay?: () => void;
+  onWalletCreated?: (walletId: string) => void;
   amount?: string;
   symbol?: string;
 }
 
-export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
+export function CircleWallet({ onPay, onWalletCreated, amount, symbol }: CircleWalletProps) {
   const [sdk, setSdk] = useState<W3SSdk | null>(null);
   const [walletId, setWalletId] = useState<string | null>(null);
   const [step, setStep] = useState<'init' | 'create' | 'pin' | 'active'>('init');
@@ -59,6 +60,7 @@ export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
             setStep('active');
             setIsLoading(false);
             if (onPay) onPay(); // Trigger callback if provided
+            if (onWalletCreated) onWalletCreated(resData.data?.walletId || 'wallet-123-mock');
           }
         });
       } else {
