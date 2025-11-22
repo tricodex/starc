@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { parseUnits, formatUnits, erc20Abi } from 'viem';
 import { SUPPORTED_ASSETS } from '../config/assets';
+import { VAULT_ABI } from '../config/abis';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
@@ -9,15 +12,78 @@ import { Input } from './ui/Input';
 export function DepositForm() {
   const [selectedAsset, setSelectedAsset] = useState<keyof typeof SUPPORTED_ASSETS>('USDC');
   const [amount, setAmount] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<'input' | 'approve' | 'deposit'>('input');
+  
+  const { address, isConnected } = useAccount();
+  const asset = SUPPORTED_ASSETS[selectedAsset];
 
-  const handleDeposit = async () => {
-    setIsLoading(true);
-    // Simulate deposit
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    alert(`Deposited ${amount} ${SUPPORTED_ASSETS[selectedAsset].symbol}`);
+  // Contract Writes
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+
+  // Reads
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: asset.address as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [address!, asset.vaultAddress as `0x${string}`],
+    query: { enabled: !!address },
+  });
+
+  // Effect to handle step transitions
+  useEffect(() => {
+    if (isConfirmed) {
+      if (step === 'approve') {
+        refetchAllowance();
+        setStep('deposit');
+      } else if (step === 'deposit') {
+        setAmount('');
+        setStep('input');
+        alert('Deposit successful! You have received uTokens.');
+      }
+    }
+  }, [isConfirmed, step, refetchAllowance]);
+
+  // Check allowance on amount change
+  useEffect(() => {
+    if (allowance && amount && parseFloat(amount) > 0) {
+      const amountBI = parseUnits(amount, asset.decimals);
+      if (allowance >= amountBI) {
+        setStep('deposit');
+      } else {
+        setStep('approve');
+      }
+    }
+  }, [allowance, amount, asset.decimals]);
+
+  const handleAction = () => {
+    if (!address) return;
+    
+    try {
+      if (step === 'approve') {
+        writeContract({
+          address: asset.address as `0x${string}`,
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [asset.vaultAddress as `0x${string}`, parseUnits(amount, asset.decimals)],
+        });
+      } else {
+        writeContract({
+          address: asset.vaultAddress as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: 'deposit',
+          args: [asset.address as `0x${string}`, parseUnits(amount, asset.decimals), address],
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
+
+  const isLoading = isPending || isConfirming;
+  const buttonText = isLoading 
+    ? (step === 'approve' ? 'Approving...' : 'Depositing...') 
+    : (step === 'approve' ? `Approve ${asset.symbol}` : 'Deposit to Vault');
 
   return (
     <Card title="Unified Vault Deposit" description="Deposit any supported stablecoin to mint uTokens.">
@@ -52,7 +118,7 @@ export function DepositForm() {
           onChange={(e) => setAmount(e.target.value)}
           rightElement={
             <span className="text-zinc-500 text-sm font-medium pr-2">
-              {SUPPORTED_ASSETS[selectedAsset].symbol}
+              {asset.symbol}
             </span>
           }
         />
@@ -61,7 +127,7 @@ export function DepositForm() {
         <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
           <div className="flex justify-between text-sm mb-1">
             <span className="text-indigo-700">Exchange Rate</span>
-            <span className="font-medium text-indigo-900">1 {SUPPORTED_ASSETS[selectedAsset].symbol} ≈ 1.00 uARS</span>
+            <span className="font-medium text-indigo-900">1 {asset.symbol} ≈ 1.00 uARS</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-indigo-700">Est. Shares</span>
@@ -69,15 +135,22 @@ export function DepositForm() {
           </div>
         </div>
 
+        {/* Error Message */}
+        {writeError && (
+          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+            {writeError.message.split('\n')[0]}
+          </div>
+        )}
+
         {/* Action Button */}
         <Button 
           className="w-full" 
           size="lg" 
-          onClick={handleDeposit}
+          onClick={handleAction}
           isLoading={isLoading}
-          disabled={!amount || parseFloat(amount) <= 0}
+          disabled={!isConnected || !amount || parseFloat(amount) <= 0}
         >
-          Approve & Deposit
+          {!isConnected ? 'Connect Wallet' : buttonText}
         </Button>
       </div>
     </Card>
