@@ -39,7 +39,7 @@ export function Header() {
           
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-600">
             <Link href="/demo" className="hover:text-indigo-600 transition-colors">Vaults</Link>
-            <Link href="/starbucks" className="hover:text-indigo-600 transition-colors">Merchant Demo</Link>
+            <Link href="/starbucks" className="hover:text-indigo-600 transition-colors">Merchant</Link>
             <Link href="/admin" className="hover:text-indigo-600 transition-colors">Governance</Link>
           </nav>
         </div>

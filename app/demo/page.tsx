@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DepositForm } from '../components/DepositForm';
 import { VaultAnalytics } from '../components/VaultAnalytics';
 import { MerchantDashboard } from '../components/MerchantDashboard';
@@ -8,9 +8,27 @@ import { BridgeWidget } from '../components/BridgeWidget';
 import { Header } from '../components/Header';
 import { Accordion } from '../components/ui/Accordion';
 import { RecentTransactions } from '../components/RecentTransactions';
+import { MerchantPayment } from '../components/MerchantPayment';
+import { MerchantProfile } from '../components/MerchantProfile'; // Import new component
+import { Card } from '../components/ui/Card';
+import { useCircleWallet } from '../context/CircleWalletContext';
+import { getMerchantByAddress } from '../lib/actions';
+
+import { SendComponent } from '../components/SendComponent';
 
 export default function DemoPage() {
-  const [activeTab, setActiveTab] = useState<'vault' | 'merchant' | 'bridge'>('vault');
+  const [activeTab, setActiveTab] = useState<'payment' | 'vault' | 'merchant' | 'bridge' | 'profile' | 'send'>('payment');
+  const { walletId, walletAddress } = useCircleWallet();
+  const [merchant, setMerchant] = useState<any>(null);
+
+  // Fetch merchant profile when wallet connects
+  useEffect(() => {
+    if (walletAddress) {
+      getMerchantByAddress(walletAddress).then(data => {
+        setMerchant(data);
+      });
+    }
+  }, [walletAddress]);
 
   const SidebarItem = ({ id, label, icon }: { id: typeof activeTab, label: string, icon: React.ReactNode }) => (
     <button
@@ -36,6 +54,15 @@ export default function DemoPage() {
           <div className="bg-white rounded-2xl border border-zinc-200 p-4 sticky top-24">
             <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4 px-4">Menu</div>
             <nav>
+              <SidebarItem 
+                id="payment" 
+                label="Payments" 
+                icon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                } 
+              />
               <SidebarItem 
                 id="vault" 
                 label="Unified Vault" 
@@ -63,43 +90,26 @@ export default function DemoPage() {
                   </svg>
                 } 
               />
+              <SidebarItem 
+                id="profile" 
+                label="Profile" 
+                icon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                } 
+              />
+              <SidebarItem 
+                id="send" 
+                label="Send Assets" 
+                icon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                } 
+              />
             </nav>
-
-            <div className="mt-8 pt-8 border-t border-zinc-100">
-              <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4 px-4">Information</div>
-              <div className="space-y-2">
-                <Accordion title="Why Unified Vaults?">
-                  <div className="space-y-3">
-                    <div>
-                      <div className="font-medium text-zinc-900 mb-1">Fragmented Liquidity</div>
-                      <p className="text-xs text-zinc-500">Merchants receive various stablecoins. Managing them individually is inefficient.</p>
-                    </div>
-                    <div>
-                      <div className="font-medium text-zinc-900 mb-1">Unified Standard</div>
-                      <p className="text-xs text-zinc-500">Starc unifies them into a single uToken backed 1:1 by the basket.</p>
-                    </div>
-                  </div>
-                </Accordion>
-                
-                <Accordion title="Live Oracle Feeds">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center border-b border-zinc-100 pb-2">
-                      <span className="text-zinc-500">mARS / USD</span>
-                      <span className="font-mono text-emerald-600 text-xs">0.001002</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-zinc-100 pb-2">
-                      <span className="text-zinc-500">nARS / USD</span>
-                      <span className="font-mono text-emerald-600 text-xs">0.000998</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-500">wARS / USD</span>
-                      <span className="font-mono text-emerald-600 text-xs">0.001000</span>
-                    </div>
-                    <div className="mt-2 text-[10px] text-zinc-400 text-right">Powered by Chainlink</div>
-                  </div>
-                </Accordion>
-              </div>
-            </div>
+            {/* ... existing info ... */}
           </div>
         </aside>
 
@@ -107,31 +117,38 @@ export default function DemoPage() {
         <main className="flex-1 min-w-0">
           <div className="mb-8">
             <h1 className="font-display text-2xl font-bold text-zinc-900">
+              {activeTab === 'payment' && 'Create Payment'}
               {activeTab === 'vault' && 'Unified Vault Protocol'}
               {activeTab === 'merchant' && 'Merchant Treasury Dashboard'}
               {activeTab === 'bridge' && 'Cross-Chain Bridge (CCTP)'}
+              {activeTab === 'profile' && 'Merchant Profile'}
             </h1>
             <p className="text-zinc-500 text-sm mt-1">
+              {activeTab === 'payment' && 'Generate payment links for your customers.'}
               {activeTab === 'vault' && 'Manage your stablecoin exposure and mint unified uTokens.'}
               {activeTab === 'merchant' && 'Automate your treasury operations and yield generation.'}
               {activeTab === 'bridge' && 'Seamlessly transfer USDC across chains with zero slippage.'}
+              {activeTab === 'profile' && 'Manage your merchant account settings.'}
+              {activeTab === 'send' && 'Transfer assets to other wallets.'}
             </p>
           </div>
 
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {activeTab === 'payment' && (
+              <MerchantPayment 
+                merchantId={merchant?.id} 
+                merchantName={merchant?.name} 
+                merchantSlug={merchant?.slug}
+              />
+            )}
+
             {activeTab === 'vault' && (
               <div className="space-y-6">
-                {/* Top Row: Analytics (Compact) */}
                 <VaultAnalytics />
-                
-                {/* Bottom Row: Deposit & Transactions */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  {/* Deposit Form - 5 cols */}
                   <div className="lg:col-span-5">
                     <DepositForm />
                   </div>
-                  
-                  {/* Transactions - 7 cols */}
                   <div className="lg:col-span-7">
                     <RecentTransactions />
                   </div>
@@ -145,6 +162,16 @@ export default function DemoPage() {
 
             {activeTab === 'bridge' && (
               <BridgeWidget />
+            )}
+
+            {activeTab === 'profile' && (
+              <MerchantProfile merchant={merchant} />
+            )}
+
+            {activeTab === 'send' && (
+              <div className="max-w-xl">
+                <SendComponent />
+              </div>
             )}
           </div>
         </main>
