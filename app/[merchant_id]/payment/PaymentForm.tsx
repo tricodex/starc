@@ -23,7 +23,7 @@ interface PaymentFormProps {
 
 export function PaymentForm({ merchant }: PaymentFormProps) {
   const [amount, setAmount] = useState('50.00');
-  const [selectedAsset, setSelectedAsset] = useState<keyof typeof SUPPORTED_ASSETS>('mARS');
+  const [selectedAsset, setSelectedAsset] = useState<keyof typeof SUPPORTED_ASSETS>('USDC');
   const [paymentMethod, setPaymentMethod] = useState<'vault' | 'circle'>('vault');
   const [step, setStep] = useState<'connect' | 'approve' | 'pay' | 'success'>('connect');
   const [error, setError] = useState<string | null>(null);
@@ -104,11 +104,12 @@ export function PaymentForm({ merchant }: PaymentFormProps) {
   const handlePay = () => {
     setError(null);
     try {
+      // V2: deposit(amount, receiver) - Single Asset (USDC)
       writeContract({
         address: asset.vaultAddress as `0x${string}`,
         abi: VAULT_ABI,
         functionName: 'deposit',
-        args: [asset.address as `0x${string}`, parseUnits(amount, asset.decimals), merchant.walletAddress as `0x${string}`],
+        args: [parseUnits(amount, asset.decimals), merchant.walletAddress as `0x${string}`],
       });
     } catch (e) {
       setError('Payment failed. Please try again.');
@@ -191,20 +192,26 @@ export function PaymentForm({ merchant }: PaymentFormProps) {
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">Pay with</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(Object.keys(SUPPORTED_ASSETS) as Array<keyof typeof SUPPORTED_ASSETS>).map((assetKey) => (
-                    <button
-                      key={assetKey}
-                      onClick={() => setSelectedAsset(assetKey)}
-                      className={`
-                        px-3 py-2 rounded-lg text-sm font-medium transition-all border
-                        ${selectedAsset === assetKey 
-                          ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
-                          : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50'}
-                      `}
-                    >
-                      {SUPPORTED_ASSETS[assetKey].symbol}
-                    </button>
-                  ))}
+                  {(Object.keys(SUPPORTED_ASSETS) as Array<keyof typeof SUPPORTED_ASSETS>).map((assetKey) => {
+                    const isSupported = assetKey === 'USDC';
+                    return (
+                      <button
+                        key={assetKey}
+                        onClick={() => isSupported && setSelectedAsset(assetKey)}
+                        disabled={!isSupported}
+                        className={`
+                          px-3 py-2 rounded-lg text-sm font-medium transition-all border
+                          ${selectedAsset === assetKey 
+                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                            : isSupported
+                              ? 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                              : 'bg-zinc-50 border-zinc-100 text-zinc-300 cursor-not-allowed'}
+                        `}
+                      >
+                        {SUPPORTED_ASSETS[assetKey].symbol}
+                      </button>
+                    );
+                  })}
                 </div>
                 {balance && (
                   <div className="text-right mt-1 text-xs text-zinc-500">

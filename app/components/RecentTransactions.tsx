@@ -46,8 +46,8 @@ export function RecentTransactions() {
             return {
                 hash: log.transactionHash,
                 sender: args.owner,
-                amount: formatUnits(args.assets, 18), // Assuming 18 decimals for simplicity, ideally check asset
-                asset: 'USDC', // Simplified for demo, ideally check asset address
+                amount: formatUnits(args.assets, 6), // USDC has 6 decimals
+                asset: 'USDC',
                 type: 'Deposit' as const,
                 timestamp: Date.now(), // Placeholder, would need getBlock to be accurate
                 blockNumber: log.blockNumber

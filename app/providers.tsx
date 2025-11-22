@@ -5,14 +5,19 @@ import { useState, type ReactNode } from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { mainnet, sepolia } from 'wagmi/chains';
 
-// Mock Arc Testnet chain
+// Arc Testnet chain configuration
+// https://docs.arc.network - Chain ID: 5115
 const arcTestnet = {
-  id: 5042002,
+  id: 5115,
   name: 'Arc Testnet',
-  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: {
     default: { http: ['https://rpc.testnet.arc.network'] },
   },
+  blockExplorers: {
+    default: { name: 'Arc Explorer', url: 'https://explorer.testnet.arc.network' },
+  },
+  testnet: true,
 } as const;
 
 import { injected } from 'wagmi/connectors';

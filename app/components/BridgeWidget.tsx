@@ -27,7 +27,7 @@ export function BridgeWidget() {
         <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
           <div className="flex justify-between mb-2">
             <span className="text-xs text-zinc-500">From</span>
-            <span className="text-xs text-zinc-500">Balance: 1,250.00 USDC</span>
+            <span className="text-xs text-zinc-500">Balance: -- USDC</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-zinc-200 shadow-sm">

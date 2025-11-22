@@ -77,7 +77,7 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${walletId ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'}`} />
             <span className="text-xs text-zinc-500 font-medium">
-              {walletId ? 'Wallet Connected' : 'Wallet Disconnected'} • Gemini 2.0 Flash
+              {walletId ? 'Wallet Connected' : 'Wallet Disconnected'} • Gemini 1.5 Flash
             </span>
           </div>
         </div>

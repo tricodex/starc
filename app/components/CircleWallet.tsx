@@ -36,7 +36,8 @@ export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-zinc-800/50 p-3 rounded-lg">
             <div className="text-xs text-zinc-400 mb-1">USDC Balance</div>
-            <div className="font-mono text-lg">$12,500.00</div>
+            <div className="font-mono text-lg">--</div>
+            <div className="text-[10px] text-zinc-500">Balance query requires user session token</div>
           </div>
           <div className="bg-zinc-800/50 p-3 rounded-lg">
             <div className="text-xs text-zinc-400 mb-1">Status</div>

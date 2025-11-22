@@ -10,8 +10,10 @@ import { useCircleWallet } from '../context/CircleWalletContext';
 export function MerchantDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'agent'>('overview');
   const [autoSweep, setAutoSweep] = useState(true);
-  const [balance, setBalance] = useState(12500.00);
-  const [vaultBalance, setVaultBalance] = useState(50000.00);
+  // TODO: Query actual balance from Circle API (requires X-User-Token session management)
+  // Endpoint: GET /v1/w3s/wallets/{walletId}/balances
+  const [balance, setBalance] = useState(0);
+  const [vaultBalance, setVaultBalance] = useState(0);
   const { walletId } = useCircleWallet();
 
   return (
@@ -51,9 +53,9 @@ export function MerchantDashboard() {
                 <div className="text-xs text-emerald-600 mt-1">Ready for payouts</div>
               </Card>
               <Card className="bg-indigo-50 border-indigo-100">
-                <div className="text-sm text-indigo-600 mb-1">Vault Savings (Yielding)</div>
+                <div className="text-sm text-indigo-600 mb-1">Vault Savings</div>
                 <div className="text-2xl font-bold text-indigo-900">${vaultBalance.toLocaleString()}</div>
-                <div className="text-xs text-indigo-700 mt-1">~4.5% APY</div>
+                <div className="text-xs text-indigo-700 mt-1">Query from ERC4626 vault</div>
               </Card>
               <Card className="bg-zinc-900 text-white border-zinc-800">
                 <div className="text-sm text-zinc-400 mb-1">Net Treasury</div>
