@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { SUPPORTED_ASSETS } from '../../config/assets';
 import { CircleWallet } from '../../components/CircleWallet';
+import { Header } from '../../components/Header';
 
 // Mock Vault ABI for deposit
 const vaultAbi = [
@@ -147,15 +148,15 @@ export default function MerchantPaymentPage({ params }: { params: Promise<{ merc
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-3">
-            <Image src="/logo.png" alt="Starc Logo" width={48} height={48} className="rounded-lg" />
+    <div className="min-h-screen bg-zinc-50">
+      <Header />
+      
+      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-64px)]">
+        <Card className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-xl font-bold text-zinc-900 font-display">Merchant #{merchant_id}</h1>
+            <p className="text-sm text-zinc-500">Starc Unified Payment Gateway</p>
           </div>
-          <h1 className="text-xl font-bold text-zinc-900 font-display">Merchant #{merchant_id}</h1>
-          <p className="text-sm text-zinc-500">Starc Unified Payment Gateway</p>
-        </div>
 
         <div className="space-y-6">
           <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100 text-center">
@@ -249,6 +250,7 @@ export default function MerchantPaymentPage({ params }: { params: Promise<{ merc
           )}
         </div>
       </Card>
+      </div>
     </div>
   );
 }
