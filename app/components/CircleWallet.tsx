@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useCircleWallet } from '../context/CircleWalletContext';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { SUPPORTED_ASSETS } from '../config/assets';
 
 interface CircleWalletProps {
   onPay?: () => void;
@@ -21,17 +22,22 @@ export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
             .then(res => res.json())
             .then(data => {
                 if (data?.data?.tokenBalances) {
-                    const usdc = data.data.tokenBalances.find((t: any) => t.token.symbol === 'USDC');
-                    setBalance(usdc ? usdc.amount : '0.00');
+                    // Find balance matching the requested symbol
+                    const token = data.data.tokenBalances.find((t: any) => 
+                        t.token.symbol === symbol || (symbol === 'USDC' && t.token.symbol === 'USDC')
+                    );
+                    // If not found, look for USDC as fallback or just show 0.00
+                    // Actually, better to show 0.00 if not found.
+                    setBalance(token ? token.amount : '0.00');
                 }
             })
             .catch(err => console.error("Failed to fetch circle balance", err));
     }
-  }, [walletId]);
+  }, [walletId, symbol]);
 
   if (isConnected && walletId) {
     return (
-      <Card className="bg-zinc-900 text-white border-zinc-800">
+      <Card className="bg-zinc-900 text-white border-zinc-800 p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
@@ -49,30 +55,19 @@ export function CircleWallet({ onPay, amount, symbol }: CircleWalletProps) {
           </span>
         </div>
         
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-zinc-800/50 p-3 rounded-lg">
-            <div className="text-xs text-zinc-400 mb-1">USDC Balance</div>
-            <div className="font-mono text-lg">{balance !== null ? balance : 'Loading...'}</div>
-            <div className="text-[10px] text-zinc-500">Programmable Wallet</div>
-          </div>
-          <div className="bg-zinc-800/50 p-3 rounded-lg">
-            <div className="text-xs text-zinc-400 mb-1">Status</div>
-            <div className="text-sm">Programmable</div>
-          </div>
+        <div className="bg-zinc-800/50 p-3 rounded-lg mb-4">
+          <div className="text-xs text-zinc-400 mb-1">{symbol || 'USDC'} Balance</div>
+          <div className="font-mono text-lg">{balance !== null ? balance : 'Loading...'}</div>
         </div>
 
-        {/* Smart Rules Badge */}
-        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 flex items-start gap-3">
-          <div className="w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-0.5">AI Agent Active</div>
-            <div className="text-xs text-zinc-400">Auto-approving payments under $100 based on your spending history.</div>
-          </div>
-        </div>
+        {onPay && (
+            <Button 
+                className="w-full bg-white text-zinc-900 hover:bg-zinc-100"
+                onClick={onPay}
+            >
+                Pay Now
+            </Button>
+        )}
       </Card>
     );
   }

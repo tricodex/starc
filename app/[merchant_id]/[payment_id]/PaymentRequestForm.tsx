@@ -47,8 +47,8 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
   const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
-  // Asset Data (Fixed to USDC for now based on schema default)
-  const asset = SUPPORTED_ASSETS['mUSDC'];
+  // Asset Data
+  const asset = SUPPORTED_ASSETS[paymentRequest.currency as keyof typeof SUPPORTED_ASSETS] || SUPPORTED_ASSETS['mUSDC'];
   
   // Balance Check
   const { data: balanceValue } = useReadContract({
@@ -278,7 +278,7 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
                       </Button>
                     )}
                     
-                    {balanceValue && (
+                    {balanceValue !== undefined && balanceValue !== null && (
                       <div className="text-center text-xs text-zinc-400">
                         Balance: {formatUnits(balanceValue, asset.decimals)} {asset.symbol}
                       </div>

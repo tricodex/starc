@@ -8,6 +8,8 @@ import { Header } from '../components/Header';
 import { createPaymentRequest } from './actions';
 import Link from 'next/link';
 
+import { SUPPORTED_ASSETS } from '../config/assets';
+
 interface DashboardClientProps {
   merchant: {
     id: string;
@@ -19,13 +21,14 @@ interface DashboardClientProps {
 
 export function DashboardClient({ merchant, paymentRequests }: DashboardClientProps) {
   const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState<string>('mUSDC');
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsCreating(true);
     try {
-      await createPaymentRequest(merchant.id, amount);
+      await createPaymentRequest(merchant.id, amount, currency);
       setAmount('');
       // Refresh handled by server action revalidate
     } catch (error) {
@@ -50,7 +53,22 @@ export function DashboardClient({ merchant, paymentRequests }: DashboardClientPr
             <Card title="Create Payment Link" className="sticky top-24">
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Amount (USDC)</label>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Asset</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white"
+                  >
+                    {Object.keys(SUPPORTED_ASSETS).map((key) => (
+                      <option key={key} value={key}>
+                        {SUPPORTED_ASSETS[key as keyof typeof SUPPORTED_ASSETS].name} ({SUPPORTED_ASSETS[key as keyof typeof SUPPORTED_ASSETS].symbol})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Amount</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">$</span>
                     <input

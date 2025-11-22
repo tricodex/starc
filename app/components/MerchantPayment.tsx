@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { useCircleWallet } from '../context/CircleWalletContext';
 import { SUPPORTED_ASSETS } from '../config/assets';
 
+import { getMerchantPayments } from '../lib/actions';
+
 interface MerchantPaymentProps {
   merchantId?: string;
   merchantName?: string;
@@ -38,7 +40,7 @@ export function MerchantPayment({ merchantId, merchantName, merchantSlug }: Merc
     }
     setIsCreating(true);
     try {
-      await createPaymentRequest(merchantId, amount); // This creates the DB record
+      await createPaymentRequest(merchantId, amount, currency); // This creates the DB record
       
       // Simulate finding the ID (in real app, createPaymentRequest should return the ID)
       // We'll just re-fetch transactions to show pending
