@@ -7,11 +7,11 @@ import { mainnet, sepolia } from 'wagmi/chains';
 
 // Mock Arc Testnet chain
 const arcTestnet = {
-  id: 5115, // Replace with actual Arc Testnet ID if known, using a placeholder
+  id: 5042002,
   name: 'Arc Testnet',
-  nativeCurrency: { name: 'Arc', symbol: 'ARC', decimals: 18 },
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://testnet-rpc.arc.network'] }, // Replace with actual RPC
+    default: { http: ['https://rpc.testnet.arc.network'] },
   },
 } as const;
 

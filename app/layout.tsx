@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Starc | Unified Stablecoin Protocol",
   description: "Unified Vaults for the Arc Network",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({
