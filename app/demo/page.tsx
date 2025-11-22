@@ -29,7 +29,7 @@ export default function DemoPage() {
     <div className="min-h-screen bg-zinc-50 flex flex-col">
       <Header />
 
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8">
+      <div className="flex-1 max-w-[95%] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8">
         {/* Sidebar */}
         <aside className="w-64 shrink-0 hidden lg:block">
           <div className="bg-white rounded-2xl border border-zinc-200 p-4 sticky top-24">

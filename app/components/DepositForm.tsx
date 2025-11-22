@@ -77,81 +77,146 @@ export function DepositForm() {
       }
     } catch (e: any) {
       console.error("Transaction failed:", e);
-      // The error will also be captured by the writeError state from the hook
     }
   };
 
   const isLoading = isPending || isConfirming;
-  const buttonText = isLoading 
-    ? (step === 'approve' ? 'Approving...' : 'Depositing...') 
-    : (step === 'approve' ? `Approve ${asset.symbol}` : 'Deposit to Vault');
+  
+  // Stepper Logic
+  const steps = [
+    { id: 'input', label: 'Input' },
+    { id: 'approve', label: 'Approve' },
+    { id: 'deposit', label: 'Mint' }
+  ];
+  
+  const currentStepIndex = steps.findIndex(s => s.id === (step === 'input' ? 'input' : step));
+  // If step is 'deposit' but we are just inputting, it's index 0. 
+  // Actually, 'deposit' state means ready to deposit.
+  // Let's simplify: 
+  // Input -> Approve (if needed) -> Mint
+  // If allowance exists, we skip approve visually? Or show it as done?
+  // Let's show all 3.
+  
+  const getStepStatus = (index: number) => {
+    if (step === 'input') return index === 0 ? 'current' : 'upcoming';
+    if (step === 'approve') return index === 1 ? 'current' : (index < 1 ? 'complete' : 'upcoming');
+    if (step === 'deposit') return index === 2 ? 'current' : 'complete';
+    return 'upcoming';
+  };
 
   return (
-    <Card title="Unified Vault Deposit" description="Deposit any supported stablecoin to mint uTokens.">
-      <div className="space-y-6">
-        {/* Asset Selection */}
+    <Card className="h-full flex flex-col">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-zinc-900 font-display">Unified Vault Deposit</h2>
+        <p className="text-sm text-zinc-500">Deposit supported stablecoins to mint uTokens.</p>
+      </div>
+
+      {/* Transaction Stepper */}
+      <div className="flex items-center justify-between mb-8 px-2">
+        {steps.map((s, i) => {
+          const status = getStepStatus(i);
+          return (
+            <div key={s.id} className="flex flex-col items-center relative z-10">
+              <div className={`
+                w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300
+                ${status === 'complete' ? 'bg-emerald-500 text-white' : ''}
+                ${status === 'current' ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' : ''}
+                ${status === 'upcoming' ? 'bg-zinc-100 text-zinc-400' : ''}
+              `}>
+                {status === 'complete' ? '✓' : i + 1}
+              </div>
+              <span className={`text-xs font-medium mt-2 ${status === 'current' ? 'text-indigo-600' : 'text-zinc-500'}`}>
+                {s.label}
+              </span>
+              {/* Connector Line */}
+              {i < steps.length - 1 && (
+                <div className={`
+                  absolute top-4 left-1/2 w-[calc(100%+2rem)] h-0.5 -z-10
+                  ${status === 'complete' ? 'bg-emerald-500' : 'bg-zinc-100'}
+                `} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="space-y-8 flex-1">
+        {/* Asset Selection - Expanded Grid */}
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">Select Asset</label>
-          <div className="grid grid-cols-3 gap-2">
+          <label className="block text-sm font-medium text-zinc-700 mb-3">Select Asset</label>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
             {(Object.keys(SUPPORTED_ASSETS) as Array<keyof typeof SUPPORTED_ASSETS>).map((assetKey) => (
               <button
                 key={assetKey}
                 onClick={() => setSelectedAsset(assetKey)}
                 className={`
-                  px-3 py-2 rounded-lg text-sm font-medium transition-all
+                  flex flex-col items-center justify-center p-3 rounded-xl border transition-all
                   ${selectedAsset === assetKey 
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
-                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
+                    : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50'}
                 `}
               >
-                {SUPPORTED_ASSETS[assetKey].symbol}
+                <span className="font-bold text-lg">{SUPPORTED_ASSETS[assetKey].symbol}</span>
+                <span className="text-[10px] opacity-70">{SUPPORTED_ASSETS[assetKey].name}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Amount Input */}
-        <Input
-          label="Amount"
-          type="number"
-          placeholder="0.00"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          rightElement={
-            <span className="text-zinc-500 text-sm font-medium pr-2">
-              {asset.symbol}
-            </span>
-          }
-        />
-
-        {/* Info Panel */}
-        <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-indigo-700">Exchange Rate</span>
-            <span className="font-medium text-indigo-900">1 {asset.symbol} ≈ 1.00 uARS</span>
+        {/* Amount Input - Spacious */}
+        <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
+          <div className="flex justify-between mb-2">
+             <label className="text-sm font-medium text-zinc-700">Amount to Deposit</label>
+             <span className="text-xs text-zinc-500">Balance: --</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-indigo-700">Est. Shares</span>
-            <span className="font-medium text-indigo-900">{amount || '0.00'} uARS</span>
+          <div className="relative">
+            <input
+              type="number"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-transparent text-4xl font-bold text-zinc-900 placeholder-zinc-300 focus:outline-none"
+            />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <span className="text-lg font-medium text-zinc-500">{asset.symbol}</span>
+              <button className="text-xs bg-zinc-200 hover:bg-zinc-300 text-zinc-600 px-2 py-1 rounded">MAX</button>
+            </div>
           </div>
         </div>
 
-        {/* Error Message */}
-        {writeError && (
-          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-            {writeError.message.split('\n')[0]}
+        {/* Info Panel & Error */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-zinc-200 shadow-sm">
+            <div className="text-sm text-zinc-500">Exchange Rate</div>
+            <div className="font-mono font-medium text-zinc-900">1 {asset.symbol} ≈ 1.00 uARS</div>
           </div>
-        )}
+          
+          {writeError && (
+            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+              <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-sm text-red-700">
+                <span className="font-bold block mb-1">Transaction Failed</span>
+                {writeError.message.split('\n')[0]}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Action Button */}
         <Button 
-          className="w-full" 
+          className="w-full py-4 text-lg" 
           size="lg" 
           onClick={handleAction}
           isLoading={isLoading}
           disabled={!isConnected || !amount || parseFloat(amount) <= 0}
         >
-          {!isConnected ? 'Connect Wallet' : buttonText}
+          {!isConnected ? 'Connect Wallet' : (
+            isLoading 
+              ? (step === 'approve' ? 'Approving USDC...' : 'Minting uTokens...') 
+              : (step === 'approve' ? `Approve ${asset.symbol}` : 'Mint uTokens')
+          )}
         </Button>
       </div>
     </Card>
