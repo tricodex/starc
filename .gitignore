@@ -46,3 +46,7 @@ internal-docs
 notes.md
 rules/
 /app/generated/prisma
+.env.dev
+
+# YoYo AI version control directory
+.yoyo/

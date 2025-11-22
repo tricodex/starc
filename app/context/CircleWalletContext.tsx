@@ -32,18 +32,41 @@ export function CircleWalletProvider({ children }: { children: ReactNode }) {
     if (!sdk) return;
     setIsLoading(true);
     try {
+      // Generate unique user ID for each wallet creation (for testing)
+      const userId = `test_user_qa_${Date.now()}`;
+
       // 1. Request Challenge from Backend
       const response = await fetch('/api/circle/wallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_challenge', userId: 'merchant_user_123' }) // Demo User ID
+        body: JSON.stringify({ action: 'create_challenge', userId }) // Dynamic User ID
       });
       
-      const data = await response.json();
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Non-JSON response:", responseText);
+        throw new Error("Server returned non-JSON response");
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create wallet");
+      }
+
       const challengeId = data.data?.challengeId;
-      
-      if (challengeId) {
-        // 2. Execute Challenge with SDK (User sets PIN)
+      const userToken = data.userToken;
+      const encryptionKey = data.encryptionKey;
+
+      if (challengeId && userToken && encryptionKey) {
+        // 2. Set SDK authentication with userToken and encryptionKey
+        sdk.setAuthentication({
+          userToken,
+          encryptionKey
+        });
+
+        // 3. Execute Challenge with SDK (User sets PIN)
         sdk.execute(challengeId, (error, result) => {
           if (error) {
             console.error("SDK Error:", error);
@@ -51,16 +74,16 @@ export function CircleWalletProvider({ children }: { children: ReactNode }) {
             setIsLoading(false);
             return;
           }
-          
+
           if (result) {
             console.log("Wallet Created:", result);
-            const resData = result as any; 
+            const resData = result as any;
             setWalletId(resData.data?.walletId);
             setIsLoading(false);
           }
         });
       } else {
-        throw new Error("Failed to get challenge");
+        throw new Error("Failed to get challenge, userToken, or encryptionKey");
       }
     } catch (e) {
       console.error("Wallet Creation Failed:", e);
