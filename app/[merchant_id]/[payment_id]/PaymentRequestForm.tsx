@@ -136,7 +136,7 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
           <LottieAnimation animationData={loadingCoinAnimation} height={200} className="mx-auto mb-4" />
           <h2 className="text-xl font-bold text-zinc-900 mb-2">Processing Payment</h2>
           <p className="text-zinc-500 mb-4">Please wait while the transaction confirms on Arc Testnet.</p>
-          {hash && <TruncatedHash hash={hash} externalLink={`https://explorer.testnet.arc.network/tx/${hash}`} />}
+          {hash && <TruncatedHash hash={hash} externalLink={`https://testnet.arcscan.app/tx/${hash}`} />}
         </Card>
       </div>
     );
@@ -154,7 +154,7 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
           {hash && (
             <div className="bg-zinc-50 rounded-lg p-3 mb-6">
               <div className="text-xs text-zinc-400 mb-1">Transaction Hash</div>
-              <TruncatedHash hash={hash} externalLink={`https://explorer.testnet.arc.network/tx/${hash}`} />
+              <TruncatedHash hash={hash} externalLink={`https://testnet.arcscan.app/tx/${hash}`} />
             </div>
           )}
           <Button className="w-full" onClick={() => window.location.reload()}>
@@ -188,6 +188,7 @@ export function PaymentRequestForm({ merchant, paymentRequest }: PaymentRequestF
         <Card className="max-w-md w-full relative overflow-hidden">
           {/* QR Code Toggle */}
           <button 
+          title='Show QR Code'
             onClick={() => setShowQR(!showQR)}
             className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-indigo-600 transition-colors"
           >

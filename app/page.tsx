@@ -23,8 +23,8 @@ export default function Home() {
             <Link href="/demo" className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:-translate-y-0.5">
               Launch App
             </Link>
-            <Link href="/docs/risk_architecture.md" className="w-full sm:w-auto px-8 py-4 bg-white text-zinc-900 border border-zinc-200 rounded-xl font-semibold hover:bg-zinc-50 transition-all hover:border-zinc-300">
-              Read Architecture
+            <Link href="/architecture" className="w-full sm:w-auto px-8 py-4 bg-white text-zinc-900 border border-zinc-200 rounded-xl font-semibold hover:bg-zinc-50 transition-all hover:border-zinc-300">
+              View Architecture
             </Link>
           </div>
         </div>
