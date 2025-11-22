@@ -56,27 +56,28 @@ export function DepositForm() {
     }
   }, [allowance, amount, asset.decimals]);
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (!address) return;
     
     try {
       if (step === 'approve') {
-        writeContract({
+        await writeContract({
           address: asset.address as `0x${string}`,
           abi: erc20Abi,
           functionName: 'approve',
           args: [asset.vaultAddress as `0x${string}`, parseUnits(amount, asset.decimals)],
         });
       } else {
-        writeContract({
+        await writeContract({
           address: asset.vaultAddress as `0x${string}`,
           abi: VAULT_ABI,
           functionName: 'deposit',
           args: [asset.address as `0x${string}`, parseUnits(amount, asset.decimals), address],
         });
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("Transaction failed:", e);
+      // The error will also be captured by the writeError state from the hook
     }
   };
 

@@ -1,14 +1,14 @@
 export const SUPPORTED_ASSETS = {
     'USDC': {
         address: '0x3600000000000000000000000000000000000000', // Native USDC on Arc Testnet
-        vaultAddress: '0x0000000000000000000000000000000000000000', // Placeholder
+        vaultAddress: '0x1234567890123456789012345678901234567890', // Placeholder (Replace with deployed Vault)
         decimals: 6,
         symbol: 'USDC',
         name: 'Native USDC'
     },
     'mARS': {
-        address: '0x0000000000000000000000000000000000000000', // Placeholder
-        vaultAddress: '0x0000000000000000000000000000000000000000', // Placeholder
+        address: '0x0000000000000000000000000000000000000001', // Non-zero Placeholder
+        vaultAddress: '0x1234567890123456789012345678901234567890', // Placeholder
         decimals: 18,
         symbol: 'mARS',
         name: 'Mock ARS'
