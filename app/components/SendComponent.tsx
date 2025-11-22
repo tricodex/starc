@@ -103,9 +103,11 @@ export function SendComponent() {
               onChange={(e) => setToken(e.target.value)}
               className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
             >
-              <option value="USDC">USDC</option>
-              <option value="mARS">mARS</option>
-              {/* Add other tokens */}
+              {Object.keys(SUPPORTED_ASSETS).filter(key => key !== 'USDC').map((assetKey) => (
+                <option key={assetKey} value={assetKey}>
+                  {SUPPORTED_ASSETS[assetKey as keyof typeof SUPPORTED_ASSETS].name} ({SUPPORTED_ASSETS[assetKey as keyof typeof SUPPORTED_ASSETS].symbol})
+                </option>
+              ))}
             </select>
           </div>
         </div>

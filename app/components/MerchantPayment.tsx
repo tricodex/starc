@@ -7,7 +7,7 @@ import { Button } from '../components/ui/Button';
 import { createPaymentRequest } from '../[merchant_id]/actions';
 import Link from 'next/link';
 import { useCircleWallet } from '../context/CircleWalletContext';
-import { getMerchantPayments } from '../lib/actions';
+import { SUPPORTED_ASSETS } from '../config/assets';
 
 interface MerchantPaymentProps {
   merchantId?: string;
@@ -85,9 +85,11 @@ export function MerchantPayment({ merchantId, merchantName, merchantSlug }: Merc
                   onChange={(e) => setCurrency(e.target.value)}
                   className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 >
-                  <option value="USDC">USDC (Native)</option>
-                  <option value="mARS">mARS</option>
-                  <option value="nARS">nARS</option>
+                  {Object.keys(SUPPORTED_ASSETS).filter(key => key !== 'USDC').map((assetKey) => (
+                    <option key={assetKey} value={assetKey}>
+                       {SUPPORTED_ASSETS[assetKey as keyof typeof SUPPORTED_ASSETS].name} ({SUPPORTED_ASSETS[assetKey as keyof typeof SUPPORTED_ASSETS].symbol})
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
