@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         const { message, context } = await req.json();
         const { balance, vaultBalance } = context;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
         const chat = model.startChat({
             history: [
