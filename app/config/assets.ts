@@ -4,22 +4,22 @@ export const SUPPORTED_ASSETS = {
     'Native USDC': {
         address: '0x3600000000000000000000000000000000000000', // Native USDC (Gas Token)
         vaultAddress: '0x6b9214D97aebd45D308F3dBdf599042f51B3D846', // Original Vault
-        decimals: 18, // Arc Testnet uses 18 decimals for Native USDC
+        decimals: 18, // Arc Testnet uses 18 decimals for Native USDC (for display)
         symbol: 'USDC',
         name: 'Native USDC',
         oracleAddress: '0xed2ecEc90a6ad378c819391D585bf5598c73e896',
         routerAddress: STARC_ROUTER_ADDRESS,
-        isVaultAsset: true
+        isVaultAsset: false // Native tokens can't be vault assets (no approve/transferFrom)
     },
     'USDC': {
         address: '0x3600000000000000000000000000000000000000', // Native USDC (Gas Token)
         vaultAddress: '0x6b9214D97aebd45D308F3dBdf599042f51B3D846', // Original Vault
-        decimals: 18, // Arc Testnet uses 18 decimals for Native USDC
+        decimals: 18, // Arc Testnet uses 18 decimals for Native USDC (for display)
         symbol: 'USDC',
         name: 'Native USDC',
         oracleAddress: '0xed2ecEc90a6ad378c819391D585bf5598c73e896',
         routerAddress: STARC_ROUTER_ADDRESS,
-        isVaultAsset: true
+        isVaultAsset: false // Native tokens can't be vault assets (no approve/transferFrom)
     },
     'mUSDC': {
         address: '0x7504C2C43D0782Ba2CbbF741e845584168A1EF90', // Mock USDC (ERC20)

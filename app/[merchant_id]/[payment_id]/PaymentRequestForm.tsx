@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useConnect, useWaitForTransactionReceipt, useWriteContract, useReadContract } from 'wagmi';
+import { useAccount, useConnect, useWaitForTransactionReceipt, useWriteContract, useReadContract, useBalance } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { parseUnits, formatUnits, erc20Abi } from 'viem';
 import { QRCodeSVG } from 'qrcode.react';
@@ -55,24 +55,35 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
 
   // Asset Data - Map currency to asset config
   const asset = SUPPORTED_ASSETS[paymentRequest.currency as keyof typeof SUPPORTED_ASSETS] || SUPPORTED_ASSETS['USDC'];
-  
-  // Balance Check
-  const { data: balanceValue } = useReadContract({
+
+  // For Native USDC, we need to detect it early
+  const isNativeToken = asset.address === '0x3600000000000000000000000000000000000000';
+
+  // Balance Check - Use getBalance for native token, balanceOf for ERC20
+  const { data: nativeBalanceData } = useBalance({
+    address: address,
+    query: { enabled: !!address && isNativeToken },
+  });
+
+  const { data: erc20Balance } = useReadContract({
     address: asset.address as `0x${string}`,
     abi: erc20Abi,
     functionName: 'balanceOf',
     args: [address!],
-    query: { enabled: !!address },
+    query: { enabled: !!address && !isNativeToken },
   });
 
-  // Allowance Check (Wagmi)
+  // Combine balances - use native balance if it's native token, otherwise ERC20
+  const balanceValue = isNativeToken ? nativeBalanceData?.value : erc20Balance;
+
+  // Allowance Check (Wagmi) - Skip for native tokens
   const spenderAddress = asset.isVaultAsset ? asset.vaultAddress : asset.routerAddress;
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: asset.address as `0x${string}`,
     abi: erc20Abi,
     functionName: 'allowance',
     args: [address!, spenderAddress as `0x${string}`],
-    query: { enabled: !!address },
+    query: { enabled: !!address && !isNativeToken },
   });
 
   // Circle Wallet Logic
@@ -133,12 +144,17 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
     }
   }, [writeError]);
 
-  // Auto-advance if allowance is sufficient (Wagmi)
+  // Auto-advance if allowance is sufficient OR if it's a native token (Wagmi)
   useEffect(() => {
-    if (allowance && parseFloat(formatUnits(allowance, asset.decimals)) >= parseFloat(paymentRequest.amount) && step === 'approve') {
-      setStep('pay');
+    if (step === 'approve') {
+      if (isNativeToken) {
+        // Native tokens don't need approval, skip directly to pay
+        setStep('pay');
+      } else if (allowance && parseFloat(formatUnits(allowance, asset.decimals)) >= parseFloat(paymentRequest.amount)) {
+        setStep('pay');
+      }
     }
-  }, [allowance, paymentRequest.amount, asset.decimals, step]);
+  }, [allowance, paymentRequest.amount, asset.decimals, step, isNativeToken]);
 
   const handleConnect = () => {
     connect({ connector: injected() });

@@ -53,13 +53,15 @@ export function TokenBalanceDropdown({ walletAddress }: TokenBalanceDropdownProp
       
       // Fetch Native USDC Balance (Gas Token) - using 18 decimals for native gas token
       const nativeBalance = await publicClient.getBalance({ address: walletAddress as Address });
+      // Set both 'Native USDC' and 'USDC' keys to the same value
+      newBalances['Native USDC'] = formatUnits(nativeBalance, 18);
       newBalances['USDC'] = formatUnits(nativeBalance, 18);
 
-      // Fetch ERC20 Token Balances (skip USDC as it's already fetched via getBalance)
+      // Fetch ERC20 Token Balances (skip both Native USDC keys as they're already fetched via getBalance)
       await Promise.all(
         Object.entries(SUPPORTED_ASSETS).map(async ([key, asset]) => {
-          // Skip USDC (gas token) - already fetched
-          if (key === 'USDC') return;
+          // Skip Native USDC keys (gas token) - already fetched
+          if (key === 'USDC' || key === 'Native USDC') return;
 
           try {
             const balance = await publicClient.readContract({
