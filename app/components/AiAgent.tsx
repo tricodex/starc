@@ -145,7 +145,27 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
 
                             // Poll for a few times
                             for (let i = 0; i < 10; i++) {
-                                const txRes = await fetch(`/api/circle/wallet/transactions?userId=${userId}`);
+                                // We need to pass the current userToken to the API route so it doesn't generate a new one
+                                // and potentially invalidate our session or cause conflicts.
+                                // But wait, the API route is server-side.
+                                // Let's pass the user token in the headers if we have it.
+                                const userToken = localStorage.getItem('circle_user_token');
+                                
+                                const headers: Record<string, string> = {};
+                                if (userToken) {
+                                    headers['X-User-Token'] = userToken;
+                                }
+
+                                const txRes = await fetch(`/api/circle/wallet/transactions?userId=${userId}`, {
+                                    headers
+                                });
+                                
+                                if (!txRes.ok) {
+                                    console.error("Failed to fetch transactions", await txRes.text());
+                                    await new Promise(resolve => setTimeout(resolve, 2000));
+                                    continue;
+                                }
+
                                 const txData = await txRes.json();
                                 
                                 if (txData?.data?.transactions?.length > 0) {

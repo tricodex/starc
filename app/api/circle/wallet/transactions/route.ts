@@ -25,7 +25,23 @@ export async function GET(request: Request) {
     // Re-import createUserToken dynamically or assume it's available
     // We'll use the existing lib function
     const { createUserToken } = await import('@/app/lib/circle');
-    const { userToken } = await createUserToken(userId);
+    
+    // IMPORTANT: Do NOT create a NEW token here if possible, as it might invalidate the previous one 
+    // or cause session issues if not handled correctly.
+    // However, for server-side fetching where we don't have the client's token, we MUST create a new one
+    // OR use the one passed from the client if we modify the API to accept it.
+    // But listTransactions requires a User Token. 
+    // Let's try to use the one from headers if present, otherwise create a new one.
+    
+    let userToken = request.headers.get('X-User-Token');
+    
+    if (!userToken) {
+        console.log("No User Token in headers, creating a new one for fetching transactions...");
+        const result = await createUserToken(userId);
+        userToken = result.userToken;
+    } else {
+        console.log("Using provided User Token from headers for fetching transactions.");
+    }
 
     const response = await fetch(`https://api.circle.com/v1/w3s/transactions?userId=${userId}&pageSize=10`, {
       method: 'GET',
