@@ -14,7 +14,8 @@ const ChatRequestSchema = z.object({
       amount: z.string(), // Decimal as string
       currency: z.string(),
       status: z.string()
-    })).optional()
+    })).optional(),
+    merchantAddress: z.string().optional()
   }),
 });
 
@@ -96,13 +97,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const { balance, vaultBalance, openRequests } = context;
+    const { balance, vaultBalance, openRequests, merchantAddress } = context;
 
     let requestsContext = "";
     if (openRequests && openRequests.length > 0) {
       requestsContext = "Open Payment Requests:\n" + openRequests.map((r: any) =>
         `- ID: ${r.id} | Amount: ${r.amount} ${r.currency} | Status: ${r.status}`
       ).join("\n");
+      if (merchantAddress) {
+        requestsContext += `\n\nMerchant Address (payment recipient): ${merchantAddress}`;
+      }
     } else {
       requestsContext = "No open payment requests.";
     }
@@ -120,7 +124,10 @@ IMPORTANT: If the user asks to send funds, make a payment, or transfer assets, y
   "message": "I have initiated the transfer request..."
 }
 
-If the user asks to "pay request [ID]" or "pay all requests", use the "openRequests" from the context to find the amount and recipient (which is the merchant address).
+If the user asks to "pay request [ID]" or "pay all requests":
+1. Use the "openRequests" from the context to find the total amount
+2. Use the "Merchant Address" shown in the context as the recipient
+3. Return the JSON with the total amount and merchant address as recipient
 For normal conversation, just return the text response.
 
 Current Treasury State:

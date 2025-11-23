@@ -247,7 +247,7 @@ export default function ArchitecturePage() {
                             <ul className="list-decimal pl-5 mt-2 space-y-1">
                                 <li>Merchant Requests Payment (e.g., $50).</li>
                                 <li>User pays with <strong>Any Asset</strong> (e.g., nARS).</li>
-                                <li>Router <strong>Swaps</strong> nARS -> Base Asset (USDC).</li>
+                                <li>Router <strong>Swaps</strong> nARS {'->'} Base Asset (USDC).</li>
                                 <li>Router <strong>Deposits</strong> Base Asset to Vault.</li>
                                 <li>Vault Mints <strong>StarcShares</strong> to Merchant.</li>
                             </ul>
