@@ -124,6 +124,10 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
         if (data.challengeId) {
             // Update SDK authentication with the new token used for the request
             if (data.userToken && data.encryptionKey) {
+                // CRITICAL: Persist new credentials to localStorage so polling uses the valid token
+                localStorage.setItem('circle_user_token', data.userToken);
+                localStorage.setItem('circle_encryption_key', data.encryptionKey);
+
                 sdk.setAuthentication({
                     userToken: data.userToken,
                     encryptionKey: data.encryptionKey
