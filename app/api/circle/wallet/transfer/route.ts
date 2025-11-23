@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const { userToken } = await createUserToken(userId);
 
     // 2. Initiate Transfer
-    const response = await fetch('https://api.circle.com/v1/w3s/users/transactions/transfer', {
+    const response = await fetch('https://api.circle.com/v1/w3s/user/transactions/transfer', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

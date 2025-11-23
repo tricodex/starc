@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         payload.amount = amount;
     }
 
-    const response = await fetch('https://api.circle.com/v1/w3s/users/transactions/contractExecution', {
+    const response = await fetch('https://api.circle.com/v1/w3s/user/transactions/contractExecution', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
