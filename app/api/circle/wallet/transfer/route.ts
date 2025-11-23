@@ -27,10 +27,9 @@ export async function POST(request: Request) {
         tokenId: tokenId,
         walletId: walletId,
         fee: {
-          type: "gas",
+          type: "level",
           config: {
-            gasLimit: "200000",
-            gasPrice: "9000000000" // 9 gwei
+            feeLevel: "MEDIUM"
           }
         }
     };
