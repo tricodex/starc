@@ -43,7 +43,7 @@ export async function GET(request: Request) {
         console.log("Using provided User Token from headers for fetching transactions.");
     }
 
-    const response = await fetch(`https://api.circle.com/v1/w3s/transactions?userId=${userId}&pageSize=10`, {
+    const response = await fetch(`https://api.circle.com/v1/w3s/transactions?pageSize=10`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
