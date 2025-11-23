@@ -15,8 +15,98 @@ import { useCircleWallet } from '../context/CircleWalletContext';
 export function MerchantDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'agent'>('overview');
   const [autoSweep, setAutoSweep] = useState(true);
-  const { walletId } = useCircleWallet();
+  const { walletId, sdk } = useCircleWallet();
   const { address } = useAccount();
+  const [isSweeping, setIsSweeping] = useState(false);
+  const [isDistributing, setIsDistributing] = useState(false);
+
+  const handleSweep = async () => {
+    if (!walletId || !sdk) return;
+    setIsSweeping(true);
+    try {
+        const userId = localStorage.getItem('circle_user_id');
+        const res = await fetch('/api/treasury/sweep', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletId, userId })
+        });
+        const data = await res.json();
+        
+        if (data.challengeId) {
+            // Update auth if needed
+            if (data.userToken && data.encryptionKey) {
+                localStorage.setItem('circle_user_token', data.userToken);
+                localStorage.setItem('circle_encryption_key', data.encryptionKey);
+                sdk.setAuthentication({ userToken: data.userToken, encryptionKey: data.encryptionKey });
+            }
+
+            sdk.execute(data.challengeId, (error, result) => {
+                setIsSweeping(false);
+                if (error) {
+                    console.error("Sweep Challenge Error:", error);
+                    alert(`Sweep Failed: ${error.message}`);
+                    return;
+                }
+                if (result) {
+                    console.log("Sweep Initiated:", result);
+                    alert(`Sweep Initiated! ${data.message}`);
+                }
+            });
+        } else if (data.skipped) {
+            setIsSweeping(false);
+            alert(data.message);
+        } else {
+            setIsSweeping(false);
+            alert(data.message || "Sweep failed");
+        }
+    } catch (e: any) {
+        setIsSweeping(false);
+        console.error("Sweep Error:", e);
+        alert(`Sweep Error: ${e.message}`);
+    }
+  };
+
+  const handlePayroll = async () => {
+    if (!walletId || !sdk) return;
+    setIsDistributing(true);
+    try {
+        const userId = localStorage.getItem('circle_user_id');
+        const res = await fetch('/api/treasury/distribute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletId, userId })
+        });
+        const data = await res.json();
+        
+        if (data.challengeId) {
+            if (data.userToken && data.encryptionKey) {
+                localStorage.setItem('circle_user_token', data.userToken);
+                localStorage.setItem('circle_encryption_key', data.encryptionKey);
+                sdk.setAuthentication({ userToken: data.userToken, encryptionKey: data.encryptionKey });
+            }
+
+            sdk.execute(data.challengeId, (error, result) => {
+                setIsDistributing(false);
+                if (error) {
+                    console.error("Payroll Challenge Error:", error);
+                    alert(`Payroll Failed: ${error.message}`);
+                    return;
+                }
+                if (result) {
+                    console.log("Payroll Initiated:", result);
+                    alert(`Payroll Initiated! ${data.message}`);
+                }
+            });
+        } else {
+            setIsDistributing(false);
+            alert(data.message || "Payroll failed");
+        }
+    } catch (e: any) {
+        setIsDistributing(false);
+        console.error("Payroll Error:", e);
+        alert(`Payroll Error: ${e.message}`);
+    }
+  };
 
   const usdcConfig = SUPPORTED_ASSETS['Native USDC'] || SUPPORTED_ASSETS['mUSDC'];
 
@@ -151,7 +241,15 @@ export function MerchantDashboard() {
                       <div className="text-xs text-zinc-500">Move excess float &gt; $10k to Starc Vault</div>
                     </div>
                   </div>
-                  <Button size="sm" variant="secondary">Configure</Button>
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    onClick={handleSweep}
+                    isLoading={isSweeping}
+                    disabled={!walletId}
+                  >
+                    {isSweeping ? 'Sweeping...' : 'Run Sweep Now'}
+                  </Button>
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100">
@@ -166,7 +264,15 @@ export function MerchantDashboard() {
                       <div className="text-xs text-zinc-500">Auto-disburse USDC on 1st/15th</div>
                     </div>
                   </div>
-                  <Button size="sm" variant="secondary">View Schedule</Button>
+                  <Button 
+                    size="sm" 
+                    variant="secondary"
+                    onClick={handlePayroll}
+                    isLoading={isDistributing}
+                    disabled={!walletId}
+                  >
+                    {isDistributing ? 'Sending...' : 'Run Payroll'}
+                  </Button>
                 </div>
               </div>
             </Card>

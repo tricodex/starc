@@ -8,14 +8,17 @@ import { SUPPORTED_ASSETS } from '../config/assets';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 
+import { useCircleWallet } from '../context/CircleWalletContext';
+
 export function BridgeWidget() {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { address } = useAccount();
+  const { walletId, sdk } = useCircleWallet();
   const usdcConfig = SUPPORTED_ASSETS.USDC;
 
   const { data: balanceData } = useReadContract({
-    address: usdcConfig.address,
+    address: usdcConfig.address as `0x${string}`,
     abi: erc20Abi,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
@@ -25,10 +28,47 @@ export function BridgeWidget() {
   const balance = balanceData ? formatUnits(balanceData, usdcConfig.decimals) : '--';
 
   const handleBridge = async () => {
+    if (!walletId || !sdk || !amount) return;
     setIsProcessing(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsProcessing(false);
-    setAmount('');
+    
+    try {
+        const userId = localStorage.getItem('circle_user_id');
+        const res = await fetch('/api/treasury/bridge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletId, userId, amount })
+        });
+        const data = await res.json();
+        
+        if (data.challengeId) {
+            if (data.userToken && data.encryptionKey) {
+                localStorage.setItem('circle_user_token', data.userToken);
+                localStorage.setItem('circle_encryption_key', data.encryptionKey);
+                sdk.setAuthentication({ userToken: data.userToken, encryptionKey: data.encryptionKey });
+            }
+
+            sdk.execute(data.challengeId, (error, result) => {
+                setIsProcessing(false);
+                if (error) {
+                    console.error("Bridge Challenge Error:", error);
+                    alert(`Bridge Failed: ${error.message}`);
+                    return;
+                }
+                if (result) {
+                    console.log("Bridge Initiated:", result);
+                    alert(`Bridge Initiated! ${data.message}`);
+                    setAmount('');
+                }
+            });
+        } else {
+            setIsProcessing(false);
+            alert(data.message || "Bridge failed");
+        }
+    } catch (e: any) {
+        setIsProcessing(false);
+        console.error("Bridge Error:", e);
+        alert(`Bridge Error: ${e.message}`);
+    }
   };
 
   return (
