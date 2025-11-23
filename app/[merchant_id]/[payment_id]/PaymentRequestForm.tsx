@@ -47,6 +47,7 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
   const [step, setStep] = useState<'connect' | 'approve' | 'pay' | 'processing' | 'success' | 'error'>('connect');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [txType, setTxType] = useState<'approve' | 'pay' | null>(null);
+  const [circleTxHash, setCircleTxHash] = useState<string | null>(null);
 
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
@@ -288,6 +289,8 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
   }
 
   if (step === 'success' || paymentRequest.status === 'COMPLETED') {
+    const displayHash = circleTxHash || hash || paymentRequest.txHash;
+
     return (
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full text-center p-8">
@@ -296,10 +299,10 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
           <p className="text-zinc-500 mb-6">
             You paid <span className="font-bold text-zinc-900">{paymentRequest.amount} {asset.symbol}</span> to {merchant.name}
           </p>
-          {hash && (
+          {displayHash && (
             <div className="bg-zinc-50 rounded-lg p-3 mb-6">
               <div className="text-xs text-zinc-400 mb-1">Transaction Hash</div>
-              <TruncatedHash hash={hash} externalLink={`https://testnet.arcscan.app/tx/${hash}`} />
+              <TruncatedHash hash={displayHash} externalLink={`https://testnet.arcscan.app/tx/${displayHash}`} />
             </div>
           )}
           <Button className="w-full" onClick={() => window.location.href = `/${merchant.slug}`}>
@@ -449,6 +452,7 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
                         } else {
                             // Finished Payment
                             if (txHash) {
+                                setCircleTxHash(txHash); // Store Circle tx hash
                                 updatePaymentStatus(paymentRequest.id, txHash)
                                     .then(() => setStep('success'))
                                     .catch(err => {

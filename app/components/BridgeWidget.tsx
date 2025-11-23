@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { formatUnits } from 'viem';
-import { useAccount, useReadContract } from 'wagmi';
-import { erc20Abi } from 'viem';
+import { useAccount, useBalance } from 'wagmi';
 import { SUPPORTED_ASSETS } from '../config/assets';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -28,15 +27,13 @@ export function BridgeWidget() {
   const { walletId, sdk } = useCircleWallet();
   const usdcConfig = SUPPORTED_ASSETS.USDC;
 
-  const { data: balanceData } = useReadContract({
-    address: usdcConfig.address as `0x${string}`,
-    abi: erc20Abi,
-    functionName: 'balanceOf',
-    args: address ? [address] : undefined,
+  // Native USDC is gas token - use useBalance instead of balanceOf
+  const { data: balanceData } = useBalance({
+    address: address,
     query: { enabled: !!address }
   });
 
-  const balance = balanceData ? formatUnits(balanceData, usdcConfig.decimals) : '--';
+  const balance = balanceData?.value ? formatUnits(balanceData.value, usdcConfig.decimals) : '--';
 
   const handleBridge = async () => {
     if (!walletId || !sdk || !amount) return;
