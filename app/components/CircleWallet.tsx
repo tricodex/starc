@@ -133,12 +133,12 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress, contract
 
                         // Poll for a few times
                         for (let i = 0; i < 15; i++) { // Increased attempts
-                        const userToken = localStorage.getItem('circle_user_token');
-                        const headers: Record<string, string> = {};
-                        if (userToken) headers['X-User-Token'] = userToken;
+                            const userToken = localStorage.getItem('circle_user_token');
+                            const headers: Record<string, string> = {};
+                            if (userToken) headers['X-User-Token'] = userToken;
 
-                        // Pass userId query param as expected by the backend (even if backend ignores it for Circle API call, it checks for its presence)
-                        const txRes = await fetch(`/api/circle/wallet/transactions?userId=${userId}&pageSize=10`, { headers });
+                            // Pass userId query param as expected by the backend
+                            const txRes = await fetch(`/api/circle/wallet/transactions?userId=${userId}&pageSize=10`, { headers });
                             
                             if (!txRes.ok) {
                                 console.error("Failed to fetch transactions", await txRes.text());
