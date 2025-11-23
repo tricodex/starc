@@ -19,14 +19,7 @@ export async function POST(request: Request) {
     const { userToken } = await createUserToken(userId);
 
     // 2. Initiate Transfer
-    const response = await fetch('https://api.circle.com/v1/w3s/user/transactions/transfer', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CIRCLE_API_KEY}`,
-        'X-User-Token': userToken
-      },
-      body: JSON.stringify({
+    const payload: any = {
         idempotencyKey: uuidv4(),
         userId: userId,
         destinationAddress: destinationAddress,
@@ -39,7 +32,16 @@ export async function POST(request: Request) {
             feeLevel: "MEDIUM"
           }
         }
-      })
+    };
+    
+    const response = await fetch('https://api.circle.com/v1/w3s/user/transactions/transfer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CIRCLE_API_KEY}`,
+        'X-User-Token': userToken
+      },
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
