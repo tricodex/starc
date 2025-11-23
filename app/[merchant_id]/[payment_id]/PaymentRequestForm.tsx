@@ -53,8 +53,8 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
   const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
-  // Asset Data
-  const asset = SUPPORTED_ASSETS[paymentRequest.currency as keyof typeof SUPPORTED_ASSETS] || SUPPORTED_ASSETS['mUSDC'];
+  // Asset Data - Map currency to asset config
+  const asset = SUPPORTED_ASSETS[paymentRequest.currency as keyof typeof SUPPORTED_ASSETS] || SUPPORTED_ASSETS['USDC'];
   
   // Balance Check
   const { data: balanceValue } = useReadContract({
@@ -77,19 +77,22 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
 
   // Circle Wallet Logic
   const { walletAddress: circleWalletAddress } = useCircleWallet();
-  
-  // Allowance Check (Circle)
+
+  // For Native USDC (gas token), we don't need approvals
+  const isNativeUSDC = asset.symbol === 'USDC' && asset.address === '0x3600000000000000000000000000000000000000';
+
+  // Allowance Check (Circle) - Skip for native USDC
   // Only check allowance if we have a wallet address and circle mode is active
   const { data: circleAllowance, refetch: refetchCircleAllowance } = useReadContract({
     address: asset.address as `0x${string}`,
     abi: erc20Abi,
     functionName: 'allowance',
     args: [circleWalletAddress as `0x${string}`, spenderAddress as `0x${string}`],
-    query: { enabled: !!circleWalletAddress && paymentMethod === 'circle' },
+    query: { enabled: !!circleWalletAddress && paymentMethod === 'circle' && !isNativeUSDC },
   });
 
-  // Check if approved - Handle potential undefined/loading state safely
-  const isCircleApproved = circleAllowance !== undefined && parseFloat(formatUnits(circleAllowance, asset.decimals)) >= parseFloat(paymentRequest.amount);
+  // Check if approved - Native USDC doesn't need approval
+  const isCircleApproved = isNativeUSDC || (circleAllowance !== undefined && parseFloat(formatUnits(circleAllowance, asset.decimals)) >= parseFloat(paymentRequest.amount));
 
   useEffect(() => {
     if (isConnected && step === 'connect') setStep('approve');
@@ -191,8 +194,17 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
 
   const getCirclePaymentConfig = () => {
     if (!asset || !circleWalletAddress) return {};
-    
-    // Force Approve if needed
+
+    // For Native USDC (gas token), use direct transfer - no contract calls needed
+    if (isNativeUSDC) {
+        return {
+            recipientAddress: merchant.walletAddress, // Direct transfer to merchant
+            contractAddress: undefined,
+            callData: undefined
+        };
+    }
+
+    // Force Approve if needed (for ERC20 tokens only)
     if (!isCircleApproved) {
         const callData = encodeFunctionData({
             abi: erc20Abi,
@@ -219,7 +231,7 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
     } else {
         // Route via Starc Router
         if (!asset.routerAddress) return {};
-        
+
         const callData = encodeFunctionData({
             abi: STARC_ROUTER_ABI,
             functionName: 'pay',
@@ -411,10 +423,10 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
                       </div>
                   )}
                   
-                  <CircleWallet 
+                  <CircleWallet
                     onPay={(txHash) => {
-                        if (!isCircleApproved) {
-                            // Just finished Approval
+                        if (!isCircleApproved && !isNativeUSDC) {
+                            // Just finished Approval (only for ERC20 tokens)
                             console.log("Approval Transaction Hash:", txHash);
                             // Wait a moment then refetch
                             setTimeout(() => refetchCircleAllowance(), 2000);
@@ -431,10 +443,10 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
                                 setStep('success');
                             }
                         }
-                    }} 
-                    amount={paymentRequest.amount} 
+                    }}
+                    amount={paymentRequest.amount}
                     symbol={asset.symbol}
-                    recipientAddress={merchant.walletAddress} // Fallback
+                    recipientAddress={circleConfig.recipientAddress || merchant.walletAddress}
                     contractAddress={circleConfig.contractAddress}
                     callData={circleConfig.callData}
                     buttonText={!isCircleApproved ? `Approve ${asset.symbol}` : "Pay Now"}

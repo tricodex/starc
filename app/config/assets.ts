@@ -1,10 +1,10 @@
 export const STARC_ROUTER_ADDRESS = '0x1eda051D6C1cbD07026B63E3E8DF6e154239bBC4';
 
 export const SUPPORTED_ASSETS = {
-    'Native USDC': {
+    'USDC': {
         address: '0x3600000000000000000000000000000000000000', // Native USDC (Gas Token)
         vaultAddress: '0x6b9214D97aebd45D308F3dBdf599042f51B3D846', // Original Vault
-        decimals: 18, // FIXED: Arc Testnet uses 18 decimals for Native USDC
+        decimals: 6, // Standard USDC decimals (Circle API returns this)
         symbol: 'USDC',
         name: 'Native USDC',
         oracleAddress: '0xed2ecEc90a6ad378c819391D585bf5598c73e896',

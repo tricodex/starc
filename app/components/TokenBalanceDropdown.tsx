@@ -51,24 +51,17 @@ export function TokenBalanceDropdown({ walletAddress }: TokenBalanceDropdownProp
     try {
       const newBalances: Record<string, string> = {};
       
-      // Fetch Native USDC Balance (Gas Token)
+      // Fetch Native USDC Balance (Gas Token) - using 18 decimals for native gas token
       const nativeBalance = await publicClient.getBalance({ address: walletAddress as Address });
-      newBalances['Native USDC'] = formatUnits(nativeBalance, 18);
+      newBalances['USDC'] = formatUnits(nativeBalance, 18);
 
-      // Fetch Token Balances
+      // Fetch ERC20 Token Balances (skip USDC as it's already fetched via getBalance)
       await Promise.all(
         Object.entries(SUPPORTED_ASSETS).map(async ([key, asset]) => {
-          // Skip if it's the Native USDC entry in assets (since we fetched it via getBalance)
-          // But actually, assets.ts has 'Native USDC' as a key now with an address.
-          // If that address is the precompile 0x36...00, readContract might work too, but getBalance is safer for "native".
-          // Let's fetch all ERC20s defined in assets.ts
-          
+          // Skip USDC (gas token) - already fetched
+          if (key === 'USDC') return;
+
           try {
-             // If the asset is marked as Native USDC in assets.ts, we can skip or double check.
-             // But for consistency, let's just read the contract if it has an address.
-             // However, 0x36...00 IS the native token precompile, so readContract might fail or behave like native.
-             // Let's rely on the keys.
-             
             const balance = await publicClient.readContract({
               address: asset.address as Address,
               abi: ERC20_ABI,
@@ -119,33 +112,27 @@ export function TokenBalanceDropdown({ walletAddress }: TokenBalanceDropdownProp
               {loading && <span className="text-xs text-indigo-600 animate-pulse">Updating...</span>}
             </div>
             <div className="max-h-80 overflow-y-auto py-1">
-              {/* Native USDC (Gas) */}
-              <div className="px-4 py-2.5 hover:bg-zinc-50 flex justify-between items-center border-b border-zinc-50">
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-zinc-900">Native USDC</span>
-                  <span className="text-xs text-zinc-500">Gas Token</span>
-                </div>
-                <span className="text-sm font-mono text-zinc-700">
-                  {balances['Native USDC'] ? parseFloat(balances['Native USDC']).toFixed(4) : '0.0000'}
-                </span>
-              </div>
-
               {/* Supported Assets */}
               {Object.entries(SUPPORTED_ASSETS).map(([key, asset]) => {
-                // Avoid duplicating Native USDC if we display it above
-                if (key === 'Native USDC') return null; 
+                // Show USDC with special styling as it's the gas token
+                const isGasToken = key === 'USDC';
+                const displayValue = balances[key] ? parseFloat(balances[key]).toLocaleString(undefined, {
+                  minimumFractionDigits: isGasToken ? 4 : 2,
+                  maximumFractionDigits: isGasToken ? 4 : 2
+                }) : (isGasToken ? '0.0000' : '0.00'); 
                 
                 return (
-                <div key={key} className="px-4 py-2.5 hover:bg-zinc-50 flex justify-between items-center border-t border-zinc-50">
+                <div key={key} className={`px-4 py-2.5 hover:bg-zinc-50 flex justify-between items-center ${isGasToken ? 'border-b' : 'border-t'} border-zinc-50`}>
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-zinc-900">{asset.symbol}</span>
-                    <span className="text-xs text-zinc-500">{asset.name}</span>
+                    <span className="text-xs text-zinc-500">{isGasToken ? 'Gas Token' : asset.name}</span>
                   </div>
                   <span className="text-sm font-mono text-zinc-700">
-                    {balances[key] ? parseFloat(balances[key]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                    {displayValue}
                   </span>
                 </div>
-              )})}
+              );
+              })}
             </div>
           </div>
         </>
