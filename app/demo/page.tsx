@@ -15,9 +15,12 @@ import { useCircleWallet } from '../context/CircleWalletContext';
 import { getMerchantByAddress } from '../lib/actions';
 
 import { SendComponent } from '../components/SendComponent';
+import { UnifiedVaultWidget } from '../components/UnifiedVaultWidget';
+import { StreamingWidget } from '../components/StreamingWidget';
+import { LiquidityWidget } from '../components/LiquidityWidget';
 
 export default function DemoPage() {
-  const [activeTab, setActiveTab] = useState<'payment' | 'vault' | 'merchant' | 'bridge' | 'profile' | 'send'>('payment');
+  const [activeTab, setActiveTab] = useState<'payment' | 'vault' | 'merchant' | 'bridge' | 'profile' | 'send' | 'streaming' | 'liquidity'>('payment');
   const { walletId, walletAddress } = useCircleWallet();
   const [merchant, setMerchant] = useState<any>(null);
 
@@ -108,6 +111,24 @@ export default function DemoPage() {
                   </svg>
                 } 
               />
+              <SidebarItem 
+                id="streaming" 
+                label="Streaming (Beta)" 
+                icon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                } 
+              />
+              <SidebarItem 
+                id="liquidity" 
+                label="Liquidity Manager" 
+                icon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                } 
+              />
             </nav>
             {/* ... existing info ... */}
           </div>
@@ -123,6 +144,8 @@ export default function DemoPage() {
                 {activeTab === 'vault' && 'Unified Vault Protocol'}
                 {activeTab === 'bridge' && 'Cross-Chain Bridge (CCTP)'}
                 {activeTab === 'profile' && 'Merchant Profile'}
+                {activeTab === 'streaming' && 'Streaming Payments'}
+                {activeTab === 'liquidity' && 'Liquidity Manager'}
               </h1>
               <p className="text-zinc-500 text-sm mt-1">
                 {activeTab === 'payment' && 'Generate payment links for your customers.'}
@@ -130,6 +153,8 @@ export default function DemoPage() {
                 {activeTab === 'bridge' && 'Seamlessly transfer USDC across chains with zero slippage.'}
                 {activeTab === 'profile' && 'Manage your merchant account settings.'}
                 {activeTab === 'send' && 'Transfer assets to other wallets.'}
+                {activeTab === 'streaming' && 'Create and manage continuous payment streams.'}
+                {activeTab === 'liquidity' && 'Provide liquidity and manage positions (Simulation).'}
               </p>
             </div>
           )}
@@ -144,17 +169,7 @@ export default function DemoPage() {
             )}
 
             {activeTab === 'vault' && (
-              <div className="space-y-6">
-                <VaultAnalytics />
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  <div className="lg:col-span-5">
-                    <DepositForm />
-                  </div>
-                  <div className="lg:col-span-7">
-                    <RecentTransactions />
-                  </div>
-                </div>
-              </div>
+              <UnifiedVaultWidget />
             )}
 
             {activeTab === 'merchant' && (
@@ -173,6 +188,14 @@ export default function DemoPage() {
               <div className="max-w-xl">
                 <SendComponent />
               </div>
+            )}
+
+            {activeTab === 'streaming' && (
+              <StreamingWidget />
+            )}
+
+            {activeTab === 'liquidity' && (
+              <LiquidityWidget />
             )}
           </div>
         </main>

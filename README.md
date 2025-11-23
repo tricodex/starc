@@ -2,6 +2,8 @@
 
 Unified stablecoin payment settlement layer on the Arc Network.
 
+![](public/home.png)
+
 ## Overview
 
 Starc enables merchants to accept USDC payments through Circle Programmable Wallets, settling them into an ERC4626 vault on Arc Testnet. The system provides payment link generation, transaction tracking, and basic treasury automation.
@@ -13,11 +15,15 @@ Starc enables merchants to accept USDC payments through Circle Programmable Wall
 - Transaction history with status tracking (PENDING/COMPLETED)
 - Merchant profile management with PostgreSQL persistence
 
+![](public/merchant.png)
+
+
 ### Payment Processing
 - **Circle Wallet Integration**: PIN-secured smart contract wallets via W3S SDK
 - **Transaction Polling**: Automatic transaction hash retrieval after PIN confirmation (up to 40 seconds)
 - **Database Tracking**: Payment requests stored with status updates and blockchain transaction links
 - **Multi-Token Support**: Native USDC (18 decimals, gas token at `0x36...00`) and ERC20 mock tokens
+
 
 ### Treasury Management
 - **Payroll System**: Database-driven employee payments
@@ -46,6 +52,9 @@ Starc enables merchants to accept USDC payments through Circle Programmable Wall
 - Displays open payment requests with merchant address context
 - Rate-limited API endpoint (10 requests per 60 seconds via Upstash Redis)
 - **NOT a treasury advisor** - purely a payment request executor
+
+![](public/agent.png)
+
 
 ## Tech Stack
 
@@ -206,11 +215,4 @@ Arc Testnet has **native USDC** at `0x3600000000000000000000000000000000000000` 
 - Payment polling uses fresh `userToken` from `localStorage` in `X-User-Token` header
 - All amounts must be parsed with correct decimals: `parseUnits(amount, asset.decimals)`
 - Native tokens (gas tokens) skip approval step; ERC20 tokens require `approve` before `deposit`/`pay`
-
-## Documentation
-
-- `PAYMENTS.md` - Circle Wallet integration patterns and transaction flow
-- `CLAUDE.md` - Project guidelines for AI assistance
-- `contracts/README.md` - Smart contract documentation
-- `internal-docs/frameworks.md` - Next.js 16, React 19, Tailwind v4, Bun 1.3 reference
 
