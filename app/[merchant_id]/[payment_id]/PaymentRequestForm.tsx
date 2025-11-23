@@ -15,6 +15,8 @@ import { Header } from '@/app/components/Header';
 import { VAULT_ABI, STARC_ROUTER_ABI } from '@/app/config/abis';
 import { updatePaymentStatus } from './actions';
 
+import { encodeFunctionData } from 'viem';
+
 // Import Lottie JSONs directly
 import loadingCoinAnimation from '@/app/assets/lottie/LoadingCoin.json';
 import successAnimation from '@/app/assets/lottie/Succes.json';
@@ -169,6 +171,43 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
       setTxType(null);
     }
   };
+
+  const getCirclePaymentConfig = () => {
+    if (!asset) return {};
+    
+    if (asset.isVaultAsset) {
+        // Direct Deposit to Vault
+        const callData = encodeFunctionData({
+            abi: VAULT_ABI,
+            functionName: 'deposit',
+            args: [parseUnits(paymentRequest.amount, asset.decimals), merchant.walletAddress as `0x${string}`]
+        });
+        return {
+            contractAddress: asset.vaultAddress,
+            callData
+        };
+    } else {
+        // Route via Starc Router
+        if (!asset.routerAddress) return {};
+        
+        const callData = encodeFunctionData({
+            abi: STARC_ROUTER_ABI,
+            functionName: 'pay',
+            args: [
+                asset.address as `0x${string}`,
+                parseUnits(paymentRequest.amount, asset.decimals),
+                asset.vaultAddress as `0x${string}`,
+                merchant.walletAddress as `0x${string}`
+            ]
+        });
+        return {
+            contractAddress: asset.routerAddress,
+            callData
+        };
+    }
+  };
+
+  const circleConfig = getCirclePaymentConfig();
 
   // Render States
   if (step === 'processing') {
@@ -332,7 +371,9 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
                 onPay={() => setStep('success')} 
                 amount={paymentRequest.amount} 
                 symbol={asset.symbol}
-                recipientAddress={merchant.walletAddress}
+                recipientAddress={merchant.walletAddress} // Fallback
+                contractAddress={circleConfig.contractAddress}
+                callData={circleConfig.callData}
               />
             )}
 

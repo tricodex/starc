@@ -10,9 +10,16 @@ interface CircleWalletProps {
   onPay?: () => void;
   amount?: string;
   symbol?: string;
+  
+  // Legacy Transfer (Pass recipientAddress)
+  recipientAddress?: string;
+  
+  // Contract Execution (Pass contractAddress + callData)
+  contractAddress?: string;
+  callData?: string;
 }
 
-export function CircleWallet({ onPay, amount, symbol, recipientAddress }: CircleWalletProps & { recipientAddress?: string }) {
+export function CircleWallet({ onPay, amount, symbol, recipientAddress, contractAddress, callData }: CircleWalletProps) {
   const { walletId, isConnected, isLoading, createWallet, sdk } = useCircleWallet();
   const [balance, setBalance] = useState<string | null>(null);
   const [tokenId, setTokenId] = useState<string | null>(null);
@@ -42,9 +49,12 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress }: Circle
   }, [walletId, symbol]);
 
   const handleTransfer = async () => {
-    if (!sdk || !walletId || !tokenId || !amount || !recipientAddress) {
-        console.error("Missing transfer requirements", { sdk: !!sdk, walletId, tokenId, amount, recipientAddress });
-        alert("Recipient address is missing.");
+    const hasTransferTarget = recipientAddress;
+    const hasContractTarget = contractAddress && callData;
+
+    if (!sdk || !walletId || !amount || (!hasTransferTarget && !hasContractTarget)) {
+        console.error("Missing transfer requirements", { sdk: !!sdk, walletId, amount, hasTransferTarget, hasContractTarget });
+        alert("Payment configuration is incomplete.");
         return;
     }
 
@@ -54,21 +64,40 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress }: Circle
         const userId = localStorage.getItem('circle_user_id');
         if (!userId) throw new Error("User ID not found");
 
-        // 2. Initiate Transfer on Backend
-        const response = await fetch('/api/circle/wallet/transfer', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                walletId,
-                destinationAddress: recipientAddress,
-                amount,
-                tokenId,
-                userId
-            })
-        });
+        let response;
+        
+        if (hasContractTarget) {
+            // CONTRACT EXECUTION (Router/Vault)
+            response = await fetch('/api/circle/wallet/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    walletId,
+                    contractAddress,
+                    callData,
+                    userId,
+                    amount: '0' // No native token sent usually for stablecoin payments
+                })
+            });
+        } else {
+            // LEGACY TOKEN TRANSFER
+            if (!tokenId) throw new Error("Token ID not found for transfer");
+            
+            response = await fetch('/api/circle/wallet/transfer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    walletId,
+                    destinationAddress: recipientAddress,
+                    amount,
+                    tokenId,
+                    userId
+                })
+            });
+        }
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Transfer failed");
+        if (!response.ok) throw new Error(data.message || "Transaction failed");
 
         const challengeId = data.challengeId;
         if (!challengeId) throw new Error("No challenge ID returned");
@@ -77,21 +106,21 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress }: Circle
         sdk.execute(challengeId, (error, result) => {
             setIsTransferring(false);
             if (error) {
-                console.error("Transfer Challenge Error:", error);
-                alert(`Transfer failed: ${error.message}`);
+                console.error("Challenge Error:", error);
+                alert(`Transaction failed: ${error.message}`);
                 return;
             }
 
             if (result) {
-                console.log("Transfer Initiated:", result);
+                console.log("Transaction Initiated:", result);
                 // 4. Notify Parent
                 if (onPay) onPay();
             }
         });
 
     } catch (error) {
-        console.error("Transfer Error:", error);
-        alert("Failed to initiate transfer. See console for details.");
+        console.error("Transaction Error:", error);
+        alert("Failed to initiate transaction. See console for details.");
         setIsTransferring(false);
     }
   };
