@@ -3,30 +3,37 @@
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { createUserToken, CIRCLE_API_KEY } from '@/app/lib/circle';
-
-// Use environment variables for payroll addresses, fallback to hardcoded if not set
-const PAYROLL_ADDRESSES = [
-    process.env.PAYROLL_ADDRESS_1,
-    process.env.PAYROLL_ADDRESS_2,
-    process.env.PAYROLL_ADDRESS_3,
-    process.env.PAYROLL_ADDRESS_4,
-    process.env.PAYROLL_ADDRESS_5
-].filter(Boolean) as string[];
-
-// Fallback if no env vars (using the one from previous hardcode)
-if (PAYROLL_ADDRESSES.length === 0) {
-    PAYROLL_ADDRESSES.push('0x712e31E91166d6a7926cf2740f99Cba38954F838');
-}
-
-const PAYROLL_AMOUNT = '5.00';
+import { db } from '@/app/lib/db';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { walletId, userId } = body;
+    const { walletId, userId, employeeId } = body;
 
     if (!walletId || !userId) {
       return NextResponse.json({ message: 'Missing walletId or userId' }, { status: 400 });
+    }
+
+    // Get active employees from database
+    let employees;
+    if (employeeId) {
+      // Pay single employee
+      const employee = await db.employee.findFirst({
+        where: { id: employeeId, active: true }
+      });
+      if (!employee) {
+        return NextResponse.json({ message: 'Employee not found or inactive' }, { status: 404 });
+      }
+      employees = [employee];
+    } else {
+      // Pay all active employees
+      employees = await db.employee.findMany({
+        where: { active: true }
+      });
+    }
+
+    if (employees.length === 0) {
+      return NextResponse.json({ message: 'No active employees found' }, { status: 400 });
     }
 
     // 1. Get User Token
@@ -53,35 +60,42 @@ export async function POST(request: Request) {
     }
 
     // Calculate total needed
-    const totalNeeded = parseFloat(PAYROLL_AMOUNT) * PAYROLL_ADDRESSES.length;
+    const totalNeeded = employees.reduce((sum, emp) => sum + parseFloat(emp.payrollAmount.toString()), 0);
 
     if (parseFloat(usdcToken.amount) < totalNeeded) {
-        return NextResponse.json({ message: `Insufficient funds. Need ${totalNeeded} USDC for ${PAYROLL_ADDRESSES.length} employees.` }, { status: 400 });
+        return NextResponse.json({
+            message: `Insufficient funds. Need ${totalNeeded.toFixed(2)} USDC for ${employees.length} employee${employees.length > 1 ? 's' : ''}.`
+        }, { status: 400 });
     }
 
     const tokenId = usdcToken.token.id;
 
-    // 3. Initiate Transfer (Payroll Batch)
-    // Note: Circle API supports 1 destination per call. We will just pay the first one for this demo 
-    // OR we could loop. For a challenge-based flow, we can only return ONE challenge ID to the frontend.
-    // So for the MVP/Hackathon, we will rotate through them or just pick one randomly to simulate "Payroll".
-    // OR better: The user asked to "set them up as our payroll addresses".
-    
-    // Let's pick a random employee to pay for this demo action to show variety
-    const randomIndex = Math.floor(Math.random() * PAYROLL_ADDRESSES.length);
-    const destinationAddress = PAYROLL_ADDRESSES[randomIndex];
+    // 3. For single employee, initiate transfer directly
+    // For multiple employees, we pick the first (UI will call this in a loop for each)
+    const employee = employees[0];
+    const amount = employee.payrollAmount.toString();
+
+    // Create payroll receipt in database
+    const receipt = await db.payrollReceipt.create({
+      data: {
+        employeeId: employee.id,
+        amount: employee.payrollAmount,
+        currency: 'USDC',
+        status: 'PENDING'
+      }
+    });
 
     const payload = {
         idempotencyKey: uuidv4(),
         userId: userId,
-        destinationAddress: destinationAddress,
-        amounts: [PAYROLL_AMOUNT],
+        destinationAddress: employee.walletAddress,
+        amounts: [amount],
         tokenId: tokenId,
         walletId: walletId,
         feeLevel: "MEDIUM"
     };
 
-    console.log(`Distributing ${PAYROLL_AMOUNT} USDC Payroll to Employee #${randomIndex + 1} (${destinationAddress})`);
+    console.log(`Distributing ${amount} USDC Payroll to ${employee.name} (${employee.walletAddress})`);
 
     const transferRes = await fetch('https://api.circle.com/v1/w3s/user/transactions/transfer', {
         method: 'POST',
@@ -96,6 +110,13 @@ export async function POST(request: Request) {
     if (!transferRes.ok) {
         const errorText = await transferRes.text();
         console.error("Circle Payroll Transfer Failed:", errorText);
+
+        // Update receipt status to FAILED
+        await db.payrollReceipt.update({
+          where: { id: receipt.id },
+          data: { status: 'FAILED' }
+        });
+
         throw new Error(`Payroll Failed: ${errorText}`);
     }
 
@@ -105,9 +126,12 @@ export async function POST(request: Request) {
         challengeId: transferData.data.challengeId,
         userToken,
         encryptionKey,
-        amount: PAYROLL_AMOUNT,
-        recipient: destinationAddress,
-        message: `Paying Employee #${randomIndex + 1}`
+        amount,
+        recipient: employee.walletAddress,
+        employeeName: employee.name,
+        receiptId: receipt.id,
+        totalEmployees: employees.length,
+        message: employees.length > 1 ? `Paying ${employee.name} (1 of ${employees.length})` : `Paying ${employee.name}`
     });
 
   } catch (error: any) {

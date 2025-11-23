@@ -35,3 +35,35 @@ model PaymentRequest {
 
   @@index([merchantId])
 }
+
+model Employee {
+  id                String               @id @default(cuid())
+  name              String
+  walletAddress     String               @unique
+  position          String?
+  payrollAmount     Decimal              @db.Decimal(18, 6) @default(0.25)
+  active            Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  payrollReceipts   PayrollReceipt[]
+
+  @@index([walletAddress])
+  @@index([active])
+}
+
+model PayrollReceipt {
+  id              String    @id @default(cuid())
+  employeeId      String
+  employee        Employee  @relation(fields: [employeeId], references: [id])
+  amount          Decimal   @db.Decimal(18, 6)
+  currency        String    @default("USDC")
+  status          String    @default("PENDING") // PENDING, COMPLETED, FAILED
+  txHash          String?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([createdAt])
+}

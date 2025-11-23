@@ -10,15 +10,15 @@ import { Button } from './ui/Button';
 import { AiAgent } from './AiAgent';
 import { DemoRequests } from './DemoRequests';
 import { CircleWallet } from './CircleWallet';
+import { PayrollComponent } from './PayrollComponent';
 import { useCircleWallet } from '../context/CircleWalletContext';
 
 export function MerchantDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'agent'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'payroll' | 'agent'>('overview');
   const [autoSweep, setAutoSweep] = useState(true);
   const { walletId, sdk } = useCircleWallet();
   const { address } = useAccount();
   const [isSweeping, setIsSweeping] = useState(false);
-  const [isDistributing, setIsDistributing] = useState(false);
 
   const handleSweep = async () => {
     if (!walletId || !sdk) return;
@@ -63,48 +63,6 @@ export function MerchantDashboard() {
         setIsSweeping(false);
         console.error("Sweep Error:", e);
         alert(`Sweep Error: ${e.message}`);
-    }
-  };
-
-  const handlePayroll = async () => {
-    if (!walletId || !sdk) return;
-    setIsDistributing(true);
-    try {
-        const userId = localStorage.getItem('circle_user_id');
-        const res = await fetch('/api/treasury/distribute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ walletId, userId })
-        });
-        const data = await res.json();
-        
-        if (data.challengeId) {
-            if (data.userToken && data.encryptionKey) {
-                localStorage.setItem('circle_user_token', data.userToken);
-                localStorage.setItem('circle_encryption_key', data.encryptionKey);
-                sdk.setAuthentication({ userToken: data.userToken, encryptionKey: data.encryptionKey });
-            }
-
-            sdk.execute(data.challengeId, (error, result) => {
-                setIsDistributing(false);
-                if (error) {
-                    console.error("Payroll Challenge Error:", error);
-                    alert(`Payroll Failed: ${error.message}`);
-                    return;
-                }
-                if (result) {
-                    console.log("Payroll Initiated:", result);
-                    alert(`Payroll Initiated! ${data.message}`);
-                }
-            });
-        } else {
-            setIsDistributing(false);
-            alert(data.message || "Payroll failed");
-        }
-    } catch (e: any) {
-        setIsDistributing(false);
-        console.error("Payroll Error:", e);
-        alert(`Payroll Error: ${e.message}`);
     }
   };
 
@@ -168,18 +126,28 @@ export function MerchantDashboard() {
         <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            activeTab === 'overview' 
-              ? 'border-indigo-600 text-indigo-600' 
+            activeTab === 'overview'
+              ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-zinc-500 hover:text-zinc-700'
           }`}
         >
           Overview
         </button>
         <button
+          onClick={() => setActiveTab('payroll')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            activeTab === 'payroll'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-zinc-500 hover:text-zinc-700'
+          }`}
+        >
+          Payroll
+        </button>
+        <button
           onClick={() => setActiveTab('agent')}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            activeTab === 'agent' 
-              ? 'border-indigo-600 text-indigo-600' 
+            activeTab === 'agent'
+              ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-zinc-500 hover:text-zinc-700'
           }`}
         >
@@ -188,7 +156,7 @@ export function MerchantDashboard() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'overview' ? (
+      {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -219,7 +187,7 @@ export function MerchantDashboard() {
                   <span className={`text-sm font-medium ${autoSweep ? 'text-emerald-600' : 'text-zinc-500'}`}>
                     {autoSweep ? 'Active' : 'Paused'}
                   </span>
-                  <button 
+                  <button
                     onClick={() => setAutoSweep(!autoSweep)}
                     className={`w-12 h-6 rounded-full transition-colors relative ${autoSweep ? 'bg-emerald-500' : 'bg-zinc-200'}`}
                   >
@@ -241,37 +209,14 @@ export function MerchantDashboard() {
                       <div className="text-xs text-zinc-500">Move excess float &gt; $10k to Starc Vault</div>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
-                    variant="secondary" 
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={handleSweep}
                     isLoading={isSweeping}
                     disabled={!walletId}
                   >
                     {isSweeping ? 'Sweeping...' : 'Run Sweep Now'}
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="font-medium text-zinc-900">Payroll Distribution</div>
-                      <div className="text-xs text-zinc-500">Auto-disburse USDC on 1st/15th</div>
-                    </div>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="secondary"
-                    onClick={handlePayroll}
-                    isLoading={isDistributing}
-                    disabled={!walletId}
-                  >
-                    {isDistributing ? 'Sending...' : 'Run Payroll'}
                   </Button>
                 </div>
               </div>
@@ -284,7 +229,13 @@ export function MerchantDashboard() {
              <CircleWallet />
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'payroll' && (
+        <PayrollComponent />
+      )}
+
+      {activeTab === 'agent' && (
         <div className="max-w-4xl mx-auto">
           <AiAgent balance={balance} vaultBalance={vaultBalance} walletId={walletId || address} />
         </div>
