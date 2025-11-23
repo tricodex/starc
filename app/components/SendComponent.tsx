@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { useCircleWallet } from '../context/CircleWalletContext';
@@ -15,26 +15,50 @@ export function SendComponent() {
   const [token, setToken] = useState('USDC');
   const [isLoading, setIsLoading] = useState(false);
   const [txId, setTxId] = useState<string | null>(null);
+  const [tokenIds, setTokenIds] = useState<Record<string, string>>({});
+
+  // Fetch balances to get Token IDs
+  useEffect(() => {
+    if (walletId) {
+        fetch(`/api/circle/wallet/balance?id=${walletId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data?.data?.tokenBalances) {
+                    const ids: Record<string, string> = {};
+                    data.data.tokenBalances.forEach((t: any) => {
+                        ids[t.token.symbol] = t.token.id;
+                    });
+                    setTokenIds(ids);
+                }
+            })
+            .catch(err => console.error("Failed to fetch circle balance", err));
+    }
+  }, [walletId]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletId || !sdk) return;
 
+    const selectedTokenId = tokenIds[token] || tokenIds['USDC']; // Fallback or handle error
+    if (!selectedTokenId) {
+        alert("Token ID not found. Please wait for balances to load.");
+        return;
+    }
+
     setIsLoading(true);
     try {
-      // In a real implementation, we would trigger a transfer challenge here.
-      // Since we don't have the full transfer backend endpoint set up in this context yet,
-      // we will simulate the flow or call an endpoint if we create one.
-      
-      // For now, we'll fetch the challenge from a hypothentical endpoint
+      const userId = localStorage.getItem('circle_user_id');
+      if (!userId) throw new Error("User ID not found");
+
       const response = await fetch('/api/circle/wallet/transfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletId,
-          recipientAddress: recipient,
+          destinationAddress: recipient,
           amount,
-          tokenId: SUPPORTED_ASSETS[token as keyof typeof SUPPORTED_ASSETS]?.address || '', // Use address as ID for now or map to Circle Token ID
+          tokenId: selectedTokenId,
+          userId
         }),
       });
 
@@ -53,13 +77,16 @@ export function SendComponent() {
                 return;
             }
             console.log('Transfer Result:', result);
-            setTxId('pending_tx_id'); // In real flow, we'd get this from polling
+            if (result) {
+                // The SDK result doesn't always contain the txId immediately for transfers
+                // But if we get here, the challenge was signed successfully.
+                setTxId('pending'); 
+                setAmount('');
+                setRecipient('');
+            }
             setIsLoading(false);
-            setAmount('');
-            setRecipient('');
         });
       } else {
-          // If it's a developer wallet or pre-approved, it might just work (unlikely for SCA)
            setIsLoading(false);
       }
 
@@ -123,7 +150,7 @@ export function SendComponent() {
                 <div className="text-sm text-emerald-700 font-medium">
                     Transfer Initiated
                 </div>
-                {txId !== 'pending_tx_id' ? (
+                {txId !== 'pending' ? (
                     <TruncatedHash 
                         hash={txId} 
                         externalLink={`https://testnet.arcscan.app/tx/${txId}`}

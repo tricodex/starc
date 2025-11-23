@@ -115,23 +115,24 @@ export default function DemoPage() {
 
         {/* Main Content Area */}
         <main className="flex-1 min-w-0">
-          <div className="mb-8">
-            <h1 className="font-display text-2xl font-bold text-zinc-900">
-              {activeTab === 'payment' && 'Create Payment'}
-              {activeTab === 'vault' && 'Unified Vault Protocol'}
-              {activeTab === 'merchant' && 'Merchant Treasury Dashboard'}
-              {activeTab === 'bridge' && 'Cross-Chain Bridge (CCTP)'}
-              {activeTab === 'profile' && 'Merchant Profile'}
-            </h1>
-            <p className="text-zinc-500 text-sm mt-1">
-              {activeTab === 'payment' && 'Generate payment links for your customers.'}
-              {activeTab === 'vault' && 'Manage your stablecoin exposure and mint unified uTokens.'}
-              {activeTab === 'merchant' && 'Automate your treasury operations and yield generation.'}
-              {activeTab === 'bridge' && 'Seamlessly transfer USDC across chains with zero slippage.'}
-              {activeTab === 'profile' && 'Manage your merchant account settings.'}
-              {activeTab === 'send' && 'Transfer assets to other wallets.'}
-            </p>
-          </div>
+          {/* Only show header for non-merchant tabs (MerchantDashboard has its own header) */}
+          {activeTab !== 'merchant' && (
+            <div className="mb-8">
+              <h1 className="font-display text-2xl font-bold text-zinc-900">
+                {activeTab === 'payment' && 'Create Payment'}
+                {activeTab === 'vault' && 'Unified Vault Protocol'}
+                {activeTab === 'bridge' && 'Cross-Chain Bridge (CCTP)'}
+                {activeTab === 'profile' && 'Merchant Profile'}
+              </h1>
+              <p className="text-zinc-500 text-sm mt-1">
+                {activeTab === 'payment' && 'Generate payment links for your customers.'}
+                {activeTab === 'vault' && 'Manage your stablecoin exposure and mint unified uTokens.'}
+                {activeTab === 'bridge' && 'Seamlessly transfer USDC across chains with zero slippage.'}
+                {activeTab === 'profile' && 'Manage your merchant account settings.'}
+                {activeTab === 'send' && 'Transfer assets to other wallets.'}
+              </p>
+            </div>
+          )}
 
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {activeTab === 'payment' && (

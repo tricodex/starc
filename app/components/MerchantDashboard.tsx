@@ -8,6 +8,7 @@ import { SUPPORTED_ASSETS } from '../config/assets';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { AiAgent } from './AiAgent';
+import { DemoRequests } from './DemoRequests';
 import { CircleWallet } from './CircleWallet';
 import { useCircleWallet } from '../context/CircleWalletContext';
 
@@ -51,7 +52,28 @@ export function MerchantDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* ... tabs ... */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-zinc-900 font-display">Merchant Dashboard</h2>
+          <p className="text-zinc-500">Manage your treasury and automate flows</p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="secondary">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export Report
+          </Button>
+          <Button>
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            New Invoice
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabs */}
       <div className="flex items-center gap-4 border-b border-zinc-200 pb-1">
         <button
           onClick={() => setActiveTab('overview')}
@@ -148,6 +170,8 @@ export function MerchantDashboard() {
                 </div>
               </div>
             </Card>
+
+            <DemoRequests />
           </div>
 
           <div className="lg:col-span-1">

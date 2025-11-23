@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { chatRateLimiter, checkRateLimit, getClientIdentifier } from "@/app/lib/ratelimit";
@@ -9,15 +9,21 @@ const ChatRequestSchema = z.object({
   context: z.object({
     balance: z.number().nonnegative("Balance must be non-negative"),
     vaultBalance: z.number().nonnegative("Vault balance must be non-negative"),
+    openRequests: z.array(z.object({
+      id: z.string(),
+      amount: z.string(), // Decimal as string
+      currency: z.string(),
+      status: z.string()
+    })).optional()
   }),
 });
 
-// Initialize Gemini AI
+// Initialize Gemini AI with new SDK
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
   console.error("CRITICAL: GEMINI_API_KEY is not set in environment variables");
 }
-const genAI = new GoogleGenerativeAI(apiKey || "");
+const genAI = new GoogleGenAI({ apiKey: apiKey || "" });
 
 const SYSTEM_PROMPT = `
 You are the Starc Treasury Advisor, an AI agent dedicated to helping merchants optimize their capital efficiency on the Arc network.
@@ -80,7 +86,7 @@ export async function POST(req: Request) {
     }
 
     const { message, context } = validationResult.data;
-    const { balance, vaultBalance } = context;
+
 
     // Check API key
     if (!apiKey) {
@@ -90,41 +96,91 @@ export async function POST(req: Request) {
       );
     }
 
-    // Initialize model with stable version and limits
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        maxOutputTokens: 256,
-        temperature: 0.7,
-      },
-    });
+    const { balance, vaultBalance, openRequests } = context;
 
-    const chat = model.startChat({
-      history: [
-        {
-          role: "user",
-          parts: [{ text: SYSTEM_PROMPT }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "Understood. I am the Starc Treasury Advisor. I am ready to analyze treasury states and provide optimization recommendations." }],
-        },
-      ],
-    });
+    let requestsContext = "";
+    if (openRequests && openRequests.length > 0) {
+      requestsContext = "Open Payment Requests:\n" + openRequests.map((r: any) =>
+        `- ID: ${r.id} | Amount: ${r.amount} ${r.currency} | Status: ${r.status}`
+      ).join("\n");
+    } else {
+      requestsContext = "No open payment requests.";
+    }
 
-    const userPrompt = `
+    const fullPrompt = `${SYSTEM_PROMPT}
+
+IMPORTANT: If the user asks to send funds, make a payment, or transfer assets, you MUST return a JSON object in the following format ONLY (no markdown, no other text):
+{
+  "action": "TRANSFER",
+  "params": {
+    "amount": "0.00",
+    "token": "USDC",
+    "recipient": "0x..."
+  },
+  "message": "I have initiated the transfer request..."
+}
+
+If the user asks to "pay request [ID]" or "pay all requests", use the "openRequests" from the context to find the amount and recipient (which is the merchant address).
+For normal conversation, just return the text response.
+
 Current Treasury State:
 - Operational Float (USDC): $${balance.toFixed(2)}
 - Vault Savings: $${vaultBalance.toFixed(2)}
 
+${requestsContext}
+
 User Message: "${message}"
 `;
 
-    const result = await chat.sendMessage(userPrompt);
-    const response = result.response;
-    const text = response.text();
+    // Use new SDK with Gemini 2.5 Flash
+    const response = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: fullPrompt,
+      config: {
+        maxOutputTokens: 2048, // Increased from 512 to allow complete responses
+        temperature: 0.7,
+      },
+    });
 
-    return NextResponse.json({ response: text });
+    const text = response.text || "";
+
+    // Validate response
+    if (!text) {
+      const finishReason = response.candidates?.[0]?.finishReason || 'UNKNOWN';
+      console.error("Gemini response missing text:", {
+        candidates: response.candidates,
+        modelVersion: response.modelVersion,
+        finishReason,
+      });
+
+      // Provide helpful error message based on finish reason
+      if (finishReason === 'MAX_TOKENS') {
+        throw new Error("Response was truncated due to token limit. Please try a shorter question.");
+      } else if (finishReason === 'SAFETY') {
+        throw new Error("Response blocked due to safety filters. Please rephrase your question.");
+      } else {
+        throw new Error("No response text from AI");
+      }
+    }
+
+    // Try to parse JSON from the response if it looks like JSON
+    let action = null;
+    let cleanText = text;
+
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const json = JSON.parse(jsonMatch[0]);
+        if (json.action === 'TRANSFER') {
+          action = json;
+          cleanText = json.message || "Transfer initiated.";
+        }
+      }
+    } catch (e) {
+      // Not JSON or failed to parse, treat as normal text
+    }
+
+    return NextResponse.json({ response: cleanText, action });
   } catch (error) {
     console.error("Gemini API Error:", error);
 

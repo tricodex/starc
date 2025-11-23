@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { useCircleWallet } from '../context/CircleWalletContext';
+import { SUPPORTED_ASSETS } from '../config/assets';
 
 interface AiAgentProps {
   balance: number;
@@ -14,15 +16,49 @@ interface AiAgentProps {
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  txId?: string;
 }
 
 export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentProps) {
+  const { sdk } = useCircleWallet();
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: 'Hello! I am your Starc Agent. I can help you optimize your treasury or manage your Circle Wallet.' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [tokenIds, setTokenIds] = useState<Record<string, string>>({});
+  const [demoRequests, setDemoRequests] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch balances to get Token IDs
+  useEffect(() => {
+    if (walletId) {
+        fetch(`/api/circle/wallet/balance?id=${walletId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data?.data?.tokenBalances) {
+                    const ids: Record<string, string> = {};
+                    data.data.tokenBalances.forEach((t: any) => {
+                        ids[t.token.symbol] = t.token.id;
+                    });
+                    setTokenIds(ids);
+                }
+            })
+            .catch(err => console.error("Failed to fetch circle balance", err));
+    }
+  }, [walletId]);
+
+  // Fetch Demo Requests
+  useEffect(() => {
+      fetch('/api/demo/requests')
+          .then(res => res.json())
+          .then(data => {
+              if (data.requests) {
+                  setDemoRequests(data.requests);
+              }
+          })
+          .catch(err => console.error("Failed to fetch demo requests", err));
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,6 +68,67 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
     scrollToBottom();
   }, [messages]);
 
+  const executeTransfer = async (params: any) => {
+    if (!walletId || !sdk) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Error: Wallet not connected or SDK not initialized.' }]);
+        return;
+    }
+
+    const { amount, token, recipient } = params;
+    const tokenId = tokenIds[token] || tokenIds['USDC'];
+
+    if (!tokenId) {
+        setMessages(prev => [...prev, { role: 'assistant', content: `Error: Token ID for ${token} not found. Please try again later.` }]);
+        return;
+    }
+
+    try {
+        const userId = localStorage.getItem('circle_user_id');
+        if (!userId) throw new Error("User ID not found");
+
+        const response = await fetch('/api/circle/wallet/transfer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                walletId,
+                destinationAddress: recipient,
+                amount: amount.toString(),
+                tokenId,
+                userId
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Transfer failed");
+
+        if (data.challengeId) {
+            sdk.execute(data.challengeId, (error, result) => {
+                if (error) {
+                    console.error("Agent Transfer Error:", error);
+                    setMessages(prev => [...prev, { role: 'assistant', content: `Transfer failed: ${error.message}` }]);
+                    return;
+                }
+                if (result) {
+                    // Type assertion or safe access since SDK types might vary
+                    const txId = (result as any).result?.transactionId || 'pending';
+                    setMessages(prev => [...prev, { 
+                        role: 'assistant', 
+                        content: `Transfer of ${amount} ${token} to ${recipient} initiated successfully!`,
+                        txId: txId 
+                    }]);
+                    
+                    // Refresh requests to see if they update (in a real app we'd mark them paid)
+                    // For now, just re-fetch to keep UI in sync if we add status updates later
+                    fetch('/api/demo/requests').then(res => res.json()).then(d => setDemoRequests(d.requests || []));
+                }
+            });
+        }
+    } catch (error: any) {
+        console.error("Agent Transfer Exception:", error);
+        setMessages(prev => [...prev, { role: 'assistant', content: `Failed to execute transfer: ${error.message}` }]);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -40,21 +137,44 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
+    const requestPayload = {
+      message: userMessage,
+      context: {
+          balance,
+          vaultBalance,
+          openRequests: demoRequests // Pass open requests to AI
+      }
+    };
+
+    console.log('Sending chat request:', requestPayload);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMessage,
-          context: { balance, vaultBalance }
-        })
+        body: JSON.stringify(requestPayload)
       });
 
+      console.log('API Response Status:', response.status);
+      console.log('API Response OK:', response.ok);
+
       const data = await response.json();
-      
+      console.log('API Response Data:', data);
+
+      if (!response.ok) {
+        console.error('API Error Response:', data);
+        throw new Error(data.error || `API returned status ${response.status}`);
+      }
+
       if (data.response) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+
+        // Handle Action
+        if (data.action && data.action.action === 'TRANSFER') {
+            await executeTransfer(data.action.params);
+        }
       } else {
+        console.error('No response field in data:', data);
         throw new Error('No response from AI');
       }
     } catch (error) {
@@ -66,27 +186,61 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
   };
 
   return (
-    <Card className="h-[600px] flex flex-col border-indigo-100 bg-gradient-to-b from-white to-indigo-50/30 relative overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-0 p-6 border-b border-indigo-100 bg-white/50 backdrop-blur-sm z-10">
+    <Card className="h-[600px] flex flex-col border-indigo-100 bg-gradient-to-b from-white to-indigo-50/30 overflow-hidden">
+      {/* Header - Fixed */}
+      <div className="flex-shrink-0 flex items-center gap-3 p-6 border-b border-indigo-100 bg-white/50 backdrop-blur-sm">
         <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm border border-zinc-100 overflow-hidden">
            <img src="/logo.png" alt="Starc Agent" className="w-full h-full object-cover" />
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="font-bold text-zinc-900 font-display">Starc Agent</h3>
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${walletId ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'}`} />
             <span className="text-xs text-zinc-500 font-medium">
-              {walletId ? 'Wallet Connected' : 'Wallet Disconnected'} • Gemini 1.5 Flash
+              {walletId ? 'Wallet Connected' : 'Wallet Disconnected'} • Gemini 2.5 Flash
             </span>
           </div>
         </div>
+        {demoRequests.length > 0 && (
+          <div className="text-right">
+            <div className="text-xs text-zinc-500">Open Requests</div>
+            <div className="text-lg font-bold text-indigo-600">{demoRequests.length}</div>
+          </div>
+        )}
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto space-y-4 p-6 custom-scrollbar pb-24">
+      {/* Open Requests Panel - Fixed when present */}
+      {demoRequests.length > 0 && (
+        <div className="flex-shrink-0 border-b border-indigo-100 bg-indigo-50/50 px-6 py-3">
+          <div className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mb-2">
+            Pending Payment Requests
+          </div>
+          <div className="space-y-1.5 max-h-32 overflow-y-auto">
+            {demoRequests.map((req: any) => (
+              <div
+                key={req.id}
+                className="flex items-center justify-between bg-white rounded-lg px-3 py-2 text-xs border border-indigo-100"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-zinc-500">{req.id.slice(0, 8)}</span>
+                  <span className="font-semibold text-zinc-900">${parseFloat(req.amount).toFixed(2)} {req.currency}</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
+                  {req.status}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 text-xs text-indigo-600">
+            💡 Try asking: "Pay all requests" or "Pay request {demoRequests[0]?.id.slice(0, 8)}"
+          </div>
+        </div>
+      )}
+
+      {/* Chat Area - Flexible, scrollable */}
+      <div className="flex-1 overflow-y-auto space-y-4 p-6 custom-scrollbar">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
             <div className={`
               max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm
               ${msg.role === 'user' 
@@ -95,6 +249,16 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
             `}>
               {msg.content}
             </div>
+            {msg.txId && (
+                <a 
+                    href={`https://testnet.arcscan.app/tx/${msg.txId}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-indigo-600 hover:underline mt-1 ml-2"
+                >
+                    View Transaction
+                </a>
+            )}
           </div>
         ))}
         {isLoading && (
@@ -111,8 +275,8 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - Pinned to Bottom */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-indigo-50">
+      {/* Input Area - Sticky to bottom, fixed height */}
+      <div className="flex-shrink-0 p-6 bg-white/80 backdrop-blur-md border-t border-indigo-50">
         <div className="relative">
           <input
             type="text"
