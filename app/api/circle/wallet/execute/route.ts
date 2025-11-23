@@ -25,12 +25,7 @@ export async function POST(request: Request) {
         contractAddress: contractAddress,
         callData: callData,
         walletId: walletId,
-        fee: {
-          type: "level",
-          config: {
-            feeLevel: "MEDIUM"
-          }
-        }
+        feeLevel: "MEDIUM"
     };
 
     // If sending native token (payable function), include amount

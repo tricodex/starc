@@ -26,12 +26,7 @@ export async function POST(request: Request) {
         amounts: [amount],
         tokenId: tokenId,
         walletId: walletId,
-        fee: {
-          type: "level",
-          config: {
-            feeLevel: "MEDIUM"
-          }
-        }
+        feeLevel: "MEDIUM"
     };
     
     const response = await fetch('https://api.circle.com/v1/w3s/user/transactions/transfer', {
