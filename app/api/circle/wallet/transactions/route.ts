@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const { createUserToken } = await import('@/app/lib/circle');
     const { userToken } = await createUserToken(userId);
 
-    const response = await fetch(`https://api.circle.com/v1/w3s/transactions?userId=${userId}&pageSize=1`, {
+    const response = await fetch(`https://api.circle.com/v1/w3s/transactions?userId=${userId}&pageSize=10`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
