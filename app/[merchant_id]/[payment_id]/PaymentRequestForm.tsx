@@ -11,6 +11,7 @@ import { LottieAnimation } from '@/app/components/ui/LottieAnimation';
 import { TruncatedHash } from '@/app/components/ui/TruncatedHash';
 import { SUPPORTED_ASSETS } from '@/app/config/assets';
 import { CircleWallet } from '@/app/components/CircleWallet';
+import { useCircleWallet } from '@/app/context/CircleWalletContext';
 import { Header } from '@/app/components/Header';
 import { VAULT_ABI, STARC_ROUTER_ABI } from '@/app/config/abis';
 import { updatePaymentStatus } from './actions';
@@ -64,7 +65,7 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
     query: { enabled: !!address },
   });
 
-  // Allowance Check
+  // Allowance Check (Wagmi)
   const spenderAddress = asset.isVaultAsset ? asset.vaultAddress : asset.routerAddress;
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: asset.address as `0x${string}`,
@@ -73,6 +74,22 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
     args: [address!, spenderAddress as `0x${string}`],
     query: { enabled: !!address },
   });
+
+  // Circle Wallet Logic
+  const { walletAddress: circleWalletAddress } = useCircleWallet();
+  
+  // Allowance Check (Circle)
+  // Only check allowance if we have a wallet address and circle mode is active
+  const { data: circleAllowance, refetch: refetchCircleAllowance } = useReadContract({
+    address: asset.address as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [circleWalletAddress as `0x${string}`, spenderAddress as `0x${string}`],
+    query: { enabled: !!circleWalletAddress && paymentMethod === 'circle' },
+  });
+
+  // Check if approved - Handle potential undefined/loading state safely
+  const isCircleApproved = circleAllowance !== undefined && parseFloat(formatUnits(circleAllowance, asset.decimals)) >= parseFloat(paymentRequest.amount);
 
   useEffect(() => {
     if (isConnected && step === 'connect') setStep('approve');
@@ -113,7 +130,7 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
     }
   }, [writeError]);
 
-  // Auto-advance if allowance is sufficient
+  // Auto-advance if allowance is sufficient (Wagmi)
   useEffect(() => {
     if (allowance && parseFloat(formatUnits(allowance, asset.decimals)) >= parseFloat(paymentRequest.amount) && step === 'approve') {
       setStep('pay');
@@ -173,8 +190,21 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
   };
 
   const getCirclePaymentConfig = () => {
-    if (!asset) return {};
+    if (!asset || !circleWalletAddress) return {};
     
+    // Force Approve if needed
+    if (!isCircleApproved) {
+        const callData = encodeFunctionData({
+            abi: erc20Abi,
+            functionName: 'approve',
+            args: [spenderAddress as `0x${string}`, parseUnits(paymentRequest.amount, asset.decimals)]
+        });
+        return {
+            contractAddress: asset.address,
+            callData
+        };
+    }
+
     if (asset.isVaultAsset) {
         // Direct Deposit to Vault
         const callData = encodeFunctionData({
@@ -367,25 +397,55 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
                 )}
               </div>
             ) : (
-              <CircleWallet 
-                onPay={(txHash) => {
-                    if (txHash) {
-                        updatePaymentStatus(paymentRequest.id, txHash)
-                            .then(() => setStep('success'))
-                            .catch(err => {
-                                console.error("Failed to update status", err);
+              <div className="space-y-4">
+                  {!isCircleApproved && circleWalletAddress && (
+                      <div className="flex items-center justify-between text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">
+                          <span>Step 1 of 2</span>
+                          <span>Approve Token</span>
+                      </div>
+                  )}
+                  {isCircleApproved && (
+                      <div className="flex items-center justify-between text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">
+                          <span>Step 2 of 2</span>
+                          <span>Confirm Payment</span>
+                      </div>
+                  )}
+                  
+                  <CircleWallet 
+                    onPay={(txHash) => {
+                        if (!isCircleApproved) {
+                            // Just finished Approval
+                            console.log("Approval Transaction Hash:", txHash);
+                            // Wait a moment then refetch
+                            setTimeout(() => refetchCircleAllowance(), 2000);
+                        } else {
+                            // Finished Payment
+                            if (txHash) {
+                                updatePaymentStatus(paymentRequest.id, txHash)
+                                    .then(() => setStep('success'))
+                                    .catch(err => {
+                                        console.error("Failed to update status", err);
+                                        setStep('success');
+                                    });
+                            } else {
                                 setStep('success');
-                            });
-                    } else {
-                        setStep('success');
-                    }
-                }} 
-                amount={paymentRequest.amount} 
-                symbol={asset.symbol}
-                recipientAddress={merchant.walletAddress} // Fallback
-                contractAddress={circleConfig.contractAddress}
-                callData={circleConfig.callData}
-              />
+                            }
+                        }
+                    }} 
+                    amount={paymentRequest.amount} 
+                    symbol={asset.symbol}
+                    recipientAddress={merchant.walletAddress} // Fallback
+                    contractAddress={circleConfig.contractAddress}
+                    callData={circleConfig.callData}
+                    buttonText={!isCircleApproved ? `Approve ${asset.symbol}` : "Pay Now"}
+                  />
+                  
+                  {!isCircleApproved && (
+                      <p className="text-xs text-center text-zinc-400 mt-2">
+                          You must approve the router to spend your {asset.symbol} before paying.
+                      </p>
+                  )}
+              </div>
             )}
 
             {/* QR Code Section */}
