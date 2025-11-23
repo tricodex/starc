@@ -137,16 +137,42 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
                     return;
                 }
                 if (result) {
-                    // Type assertion or safe access since SDK types might vary
-                    const txId = (result as any).result?.transactionId || 'pending';
-                    setMessages(prev => [...prev, { 
-                        role: 'assistant', 
-                        content: `Transfer of ${amount} ${token} to ${recipient} initiated successfully!`,
-                        txId: txId 
-                    }]);
+                    // Polling for transaction hash
+                    const pollForTxHash = async () => {
+                        try {
+                            const userId = localStorage.getItem('circle_user_id');
+                            if (!userId) return null;
+
+                            // Poll for a few times
+                            for (let i = 0; i < 10; i++) {
+                                const txRes = await fetch(`/api/circle/wallet/transactions?userId=${userId}`);
+                                const txData = await txRes.json();
+                                
+                                if (txData?.data?.transactions?.length > 0) {
+                                    const latestTx = txData.data.transactions[0];
+                                    // Check if this transaction matches our amount/recipient or just assume it's the latest
+                                    // and check if it has a hash
+                                    if (latestTx.txHash) {
+                                        return latestTx.txHash;
+                                    }
+                                }
+                                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s
+                            }
+                        } catch (e) {
+                            console.error("Polling error", e);
+                        }
+                        return null;
+                    };
+
+                    pollForTxHash().then(txHash => {
+                        setMessages(prev => [...prev, { 
+                            role: 'assistant', 
+                            content: `Transfer of ${amount} ${token} to ${recipient} initiated successfully!`,
+                            txId: txHash || undefined // Only set if we found it
+                        }]);
+                    });
                     
                     // Refresh requests to see if they update (in a real app we'd mark them paid)
-                    // For now, just re-fetch to keep UI in sync if we add status updates later
                     fetch('/api/demo/requests').then(res => res.json()).then(d => setDemoRequests(d.requests || []));
                 }
             });
@@ -278,9 +304,9 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
             `}>
               {msg.content}
             </div>
-            {msg.txId && (
+            {msg.txId && msg.txId !== 'pending' && (
                 <a 
-                    href={`https://testnet.arcscan.app/tx/${msg.txId}`} 
+                    href={`https://testnet.arcscan.app/tx/${msg.txId}`}  
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-xs text-indigo-600 hover:underline mt-1 ml-2"
