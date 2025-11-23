@@ -17,9 +17,12 @@ interface CircleWalletProps {
   // Contract Execution (Pass contractAddress + callData)
   contractAddress?: string;
   callData?: string;
+  
+  // Custom Button Text (e.g., "Approve", "Pay Now")
+  buttonText?: string;
 }
 
-export function CircleWallet({ onPay, amount, symbol, recipientAddress, contractAddress, callData }: CircleWalletProps) {
+export function CircleWallet({ onPay, amount, symbol, recipientAddress, contractAddress, callData, buttonText = 'Pay Now' }: CircleWalletProps) {
   const { walletId, isConnected, isLoading, createWallet, sdk } = useCircleWallet();
   const [balance, setBalance] = useState<string | null>(null);
   const [tokenId, setTokenId] = useState<string | null>(null);
@@ -152,7 +155,8 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress, contract
                             if (txData?.data?.transactions?.length > 0) {
                                 // Ideally we match by challengeId if available in tx data, or just take latest
                                 const latestTx = txData.data.transactions[0];
-                                console.log("Latest Tx:", latestTx);
+                                console.log(`Latest Tx ID: ${latestTx.id}, State: ${latestTx.state}, Hash: ${latestTx.txHash}, Date: ${latestTx.createDate}`);
+                                
                                 if (latestTx.txHash) {
                                     console.log("Tx Hash found:", latestTx.txHash);
                                     return latestTx.txHash;
@@ -216,7 +220,7 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress, contract
                 isLoading={isTransferring}
                 disabled={!tokenId || !balance || parseFloat(balance) < parseFloat(amount || '0')}
             >
-                {isTransferring ? 'Processing...' : 'Pay Now'}
+                {isTransferring ? 'Processing...' : buttonText}
             </Button>
         )}
         {(!tokenId || (balance && parseFloat(balance) < parseFloat(amount || '0'))) && (
