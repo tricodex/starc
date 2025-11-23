@@ -12,7 +12,8 @@ import { TruncatedHash } from '@/app/components/ui/TruncatedHash';
 import { SUPPORTED_ASSETS } from '@/app/config/assets';
 import { CircleWallet } from '@/app/components/CircleWallet';
 import { Header } from '@/app/components/Header';
-import { VAULT_ABI } from '@/app/config/abis';
+import { VAULT_ABI, STARC_ROUTER_ABI } from '@/app/config/abis';
+import { updatePaymentStatus } from './actions';
 
 // Import Lottie JSONs directly
 import loadingCoinAnimation from '@/app/assets/lottie/LoadingCoin.json';
@@ -62,11 +63,12 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
   });
 
   // Allowance Check
+  const spenderAddress = asset.isVaultAsset ? asset.vaultAddress : asset.routerAddress;
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: asset.address as `0x${string}`,
     abi: erc20Abi,
     functionName: 'allowance',
-    args: [address!, asset.vaultAddress as `0x${string}`],
+    args: [address!, spenderAddress as `0x${string}`],
     query: { enabled: !!address },
   });
 
@@ -83,14 +85,23 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
   useEffect(() => {
     if (isConfirmed) {
       if (txType === 'pay') {
-        setStep('success');
+        if (hash) {
+            updatePaymentStatus(paymentRequest.id, hash)
+                .then(() => setStep('success'))
+                .catch((err) => {
+                    console.error("Failed to update status", err);
+                    setStep('success'); // Show success anyway
+                });
+        } else {
+            setStep('success');
+        }
       } else if (txType === 'approve') {
         refetchAllowance();
         setStep('pay');
         setTxType(null);
       }
     }
-  }, [isConfirmed, txType, refetchAllowance]);
+  }, [isConfirmed, txType, refetchAllowance, hash, paymentRequest.id]);
 
   useEffect(() => {
     if (writeError) {
@@ -118,7 +129,7 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
         address: asset.address as `0x${string}`,
         abi: erc20Abi,
         functionName: 'approve',
-        args: [asset.vaultAddress as `0x${string}`, parseUnits(paymentRequest.amount, asset.decimals)],
+        args: [spenderAddress as `0x${string}`, parseUnits(paymentRequest.amount, asset.decimals)],
       });
     } catch (e) {
       console.error(e);
@@ -129,12 +140,30 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
   const handlePay = () => {
     try {
       setTxType('pay');
-      writeContract({
-        address: asset.vaultAddress as `0x${string}`,
-        abi: VAULT_ABI,
-        functionName: 'deposit',
-        args: [parseUnits(paymentRequest.amount, asset.decimals), merchant.walletAddress as `0x${string}`],
-      });
+      if (asset.isVaultAsset) {
+        // Direct Deposit to Vault
+        writeContract({
+            address: asset.vaultAddress as `0x${string}`,
+            abi: VAULT_ABI,
+            functionName: 'deposit',
+            args: [parseUnits(paymentRequest.amount, asset.decimals), merchant.walletAddress as `0x${string}`],
+        });
+      } else {
+        // Route via Starc Router
+        if (!asset.routerAddress) throw new Error("Router address not configured");
+        
+        writeContract({
+            address: asset.routerAddress as `0x${string}`,
+            abi: STARC_ROUTER_ABI,
+            functionName: 'pay',
+            args: [
+                asset.address as `0x${string}`,
+                parseUnits(paymentRequest.amount, asset.decimals),
+                asset.vaultAddress as `0x${string}`,
+                merchant.walletAddress as `0x${string}`
+            ],
+        });
+      }
     } catch (e) {
       console.error(e);
       setTxType(null);

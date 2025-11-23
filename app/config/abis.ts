@@ -92,3 +92,18 @@ export const VAULT_ABI = [
         type: 'event'
     }
 ] as const;
+
+export const STARC_ROUTER_ABI = [
+    {
+        inputs: [
+            { name: 'tokenIn', type: 'address' },
+            { name: 'amountIn', type: 'uint256' },
+            { name: 'vault', type: 'address' },
+            { name: 'merchant', type: 'address' }
+        ],
+        name: 'pay',
+        outputs: [{ name: 'shares', type: 'uint256' }],
+        stateMutability: 'nonpayable',
+        type: 'function'
+    }
+] as const;
