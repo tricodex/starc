@@ -33,7 +33,7 @@ export async function POST() {
             const req = await db.paymentRequest.create({
                 data: {
                     merchantId: merchant.id,
-                    amount: 0.01,
+                    amount: 0.5,
                     currency: 'USDC',
                     status: 'PENDING'
                 }

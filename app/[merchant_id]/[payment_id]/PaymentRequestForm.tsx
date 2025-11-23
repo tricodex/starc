@@ -302,7 +302,7 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
               <TruncatedHash hash={hash} externalLink={`https://testnet.arcscan.app/tx/${hash}`} />
             </div>
           )}
-          <Button className="w-full" onClick={() => window.location.reload()}>
+          <Button className="w-full" onClick={() => window.location.href = `/${merchant.slug}`}>
             Return to Merchant
           </Button>
         </Card>
