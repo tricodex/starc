@@ -28,6 +28,7 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
   const [isLoading, setIsLoading] = useState(false);
   const [tokenIds, setTokenIds] = useState<Record<string, string>>({});
   const [demoRequests, setDemoRequests] = useState<any[]>([]);
+  const [merchantAddress, setMerchantAddress] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch balances to get Token IDs
@@ -39,8 +40,13 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
                 if (data?.data?.tokenBalances) {
                     const ids: Record<string, string> = {};
                     data.data.tokenBalances.forEach((t: any) => {
+                        // Store both exact symbol and normalized symbol (without -TESTNET suffix)
                         ids[t.token.symbol] = t.token.id;
+                        // Also store normalized version for easier lookup
+                        const normalizedSymbol = t.token.symbol.replace('-TESTNET', '');
+                        ids[normalizedSymbol] = t.token.id;
                     });
+                    console.log('Token IDs loaded:', ids);
                     setTokenIds(ids);
                 }
             })
@@ -55,6 +61,10 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
           .then(data => {
               if (data.requests) {
                   setDemoRequests(data.requests);
+              }
+              if (data.merchantAddress) {
+                  setMerchantAddress(data.merchantAddress);
+                  console.log('Merchant address loaded:', data.merchantAddress);
               }
           })
           .catch(err => console.error("Failed to fetch demo requests", err));
@@ -75,12 +85,22 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
     }
 
     const { amount, token, recipient } = params;
-    const tokenId = tokenIds[token] || tokenIds['USDC'];
+    console.log('Transfer params:', { amount, token, recipient });
+    console.log('Available tokenIds:', tokenIds);
+
+    // Try to find token ID - first exact match, then fallback to USDC
+    const tokenId = tokenIds[token] || tokenIds['USDC'] || tokenIds['USDC-TESTNET'];
 
     if (!tokenId) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: Token ID for ${token} not found. Please try again later.` }]);
+        const availableTokens = Object.keys(tokenIds).join(', ');
+        setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `Error: Token ID for ${token} not found. Available tokens: ${availableTokens || 'none'}. Please wait for wallet to load.`
+        }]);
         return;
     }
+
+    console.log('Using token ID:', tokenId, 'for token:', token);
 
     try {
         const userId = localStorage.getItem('circle_user_id');
@@ -102,6 +122,14 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
         if (!response.ok) throw new Error(data.message || "Transfer failed");
 
         if (data.challengeId) {
+            // Update SDK authentication with the new token used for the request
+            if (data.userToken && data.encryptionKey) {
+                sdk.setAuthentication({
+                    userToken: data.userToken,
+                    encryptionKey: data.encryptionKey
+                });
+            }
+            
             sdk.execute(data.challengeId, (error, result) => {
                 if (error) {
                     console.error("Agent Transfer Error:", error);
@@ -142,7 +170,8 @@ export function AiAgent({ balance, vaultBalance, walletId, onAction }: AiAgentPr
       context: {
           balance,
           vaultBalance,
-          openRequests: demoRequests // Pass open requests to AI
+          openRequests: demoRequests, // Pass open requests to AI
+          merchantAddress // Pass merchant address for payment recipient
       }
     };
 

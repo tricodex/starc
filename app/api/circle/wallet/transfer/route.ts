@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     // 1. Get User Token
-    const { userToken } = await createUserToken(userId);
+    const { userToken, encryptionKey } = await createUserToken(userId);
 
     // 2. Initiate Transfer
     const payload: any = {
@@ -47,9 +47,11 @@ export async function POST(request: Request) {
 
     const data = await response.json();
 
-    // 3. Return Challenge ID
+    // 3. Return Challenge ID and new session token
     return NextResponse.json({
-      challengeId: data.data.challengeId
+      challengeId: data.data.challengeId,
+      userToken: userToken,
+      encryptionKey: encryptionKey
     }, { status: 200 });
 
   } catch (error) {
