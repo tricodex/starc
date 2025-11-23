@@ -102,6 +102,17 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress, contract
         const challengeId = data.challengeId;
         if (!challengeId) throw new Error("No challenge ID returned");
 
+        // Update SDK authentication with the new token used for the request
+        if (data.userToken && data.encryptionKey) {
+            localStorage.setItem('circle_user_token', data.userToken);
+            localStorage.setItem('circle_encryption_key', data.encryptionKey);
+            
+            sdk.setAuthentication({
+                userToken: data.userToken,
+                encryptionKey: data.encryptionKey
+            });
+        }
+
         // 3. Execute Challenge (PIN)
         sdk.execute(challengeId, (error, result) => {
             setIsTransferring(false);
