@@ -56,6 +56,7 @@ forge script script/DeployVaultV2.s.sol --rpc-url $RPC_URL --broadcast --legacy
   - **Auth**: `POST /v1/w3s/user/initialize` for new users.
   - **Tokens**: Managed via `app/api/circle/wallet/route.ts`.
   - **Execution**: `app/api/circle/wallet/execute/route.ts` handles contract calls.
+  - **Transactions**: `app/api/circle/wallet/transactions/route.ts` handles polling.
 
 ### 3. Database (Prisma)
 - **Merchant**: Stores profile (slug, name, walletAddress).
@@ -67,6 +68,8 @@ forge script script/DeployVaultV2.s.sol --rpc-url $RPC_URL --broadcast --legacy
     -   Uses **User-Controlled** wallets (PIN authentication).
     -   `userId` is generated uniquely per session/user to allow fresh testing.
     -   Requires `userToken` and `encryptionKey` from backend for SDK init.
+    -   **Token Persistence**: `userToken` must be persisted to `localStorage` and updated when refreshing session.
+    -   **Polling**: `GET /transactions` endpoint must use `X-User-Token` header, NOT `userId` query param.
     
 2.  **Asset Configuration**:
     -   Managed in `app/config/assets.ts`.
@@ -100,3 +103,4 @@ PRIVATE_KEY="..."
 - [x] Vault = ERC4626 (USDC)
 - [x] Circle SDK = User-Controlled Wallets
 - [x] Admin = Live on-chain data
+- [x] Payments = Router Unified Flow

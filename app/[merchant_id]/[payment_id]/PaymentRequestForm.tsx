@@ -368,7 +368,18 @@ export function PaymentRequestForm({ merchant, paymentRequest, paymentUrl }: Pay
               </div>
             ) : (
               <CircleWallet 
-                onPay={() => setStep('success')} 
+                onPay={(txHash) => {
+                    if (txHash) {
+                        updatePaymentStatus(paymentRequest.id, txHash)
+                            .then(() => setStep('success'))
+                            .catch(err => {
+                                console.error("Failed to update status", err);
+                                setStep('success');
+                            });
+                    } else {
+                        setStep('success');
+                    }
+                }} 
                 amount={paymentRequest.amount} 
                 symbol={asset.symbol}
                 recipientAddress={merchant.walletAddress} // Fallback

@@ -22,6 +22,7 @@ Starc enables merchants to accept instant, verifiable USDC payments directly int
 -   **Circle Integration**: 
     -   **User-Controlled Wallets**: PIN-secured, non-custodial wallet creation via W3S SDK.
     -   **Simulated Transfers**: Demo interface for asset transfers.
+    -   **AI Agent Payments**: Autonomous agent capable of executing payments via natural language.
 -   **Admin Console**:
     -   Real-time monitoring of vault status and oracle prices.
     -   Emergency pause/unpause controls.
@@ -109,4 +110,4 @@ We utilize Circle's Web3 Services (W3S) to provide a seamless, non-custodial exp
 -   **Smart Contract Accounts (SCA)**: Every user gets a smart contract wallet on the Arc Testnet. This allows for future features like gas abstraction and batched transactions.
 -   **Non-Custodial**: The user controls their wallet via a PIN. The private key is sharded and never fully exposed to the Starc server.
 -   **Atomic Settlement**: Payments are settled directly on-chain, with no intermediate holding accounts.
-
+-   **AI Integration**: The system includes an AI Agent that can manage the Circle Wallet, checking balances and executing transfers via natural language prompts.

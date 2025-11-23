@@ -7,7 +7,7 @@ import { Card } from './ui/Card';
 import { SUPPORTED_ASSETS } from '../config/assets';
 
 interface CircleWalletProps {
-  onPay?: () => void;
+  onPay?: (txHash?: string) => void;
   amount?: string;
   symbol?: string;
   
@@ -124,8 +124,52 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress, contract
 
             if (result) {
                 console.log("Transaction Initiated:", result);
-                // 4. Notify Parent
-                if (onPay) onPay();
+                
+                // Poll for transaction hash
+                const pollForTxHash = async () => {
+                    try {
+                        const userId = localStorage.getItem('circle_user_id');
+                        if (!userId) return null;
+
+                        // Poll for a few times
+                        for (let i = 0; i < 15; i++) { // Increased attempts
+                            const userToken = localStorage.getItem('circle_user_token');
+                            const headers: Record<string, string> = {};
+                            if (userToken) headers['X-User-Token'] = userToken;
+
+                            const txRes = await fetch(`/api/circle/wallet/transactions?pageSize=10`, { headers });
+                            
+                            if (!txRes.ok) {
+                                console.error("Failed to fetch transactions", await txRes.text());
+                                await new Promise(resolve => setTimeout(resolve, 2000));
+                                continue;
+                            }
+
+                            const txData = await txRes.json();
+                            
+                            if (txData?.data?.transactions?.length > 0) {
+                                // Ideally we match by challengeId if available in tx data, or just take latest
+                                const latestTx = txData.data.transactions[0];
+                                if (latestTx.txHash) {
+                                    return latestTx.txHash;
+                                }
+                            }
+                            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s
+                        }
+                    } catch (e) {
+                        console.error("Polling error", e);
+                    }
+                    return null;
+                };
+
+                // 4. Notify Parent with Hash (if found)
+                if (onPay) {
+                    setIsTransferring(true); // Keep showing processing while polling
+                    pollForTxHash().then(txHash => {
+                        setIsTransferring(false);
+                        onPay(txHash || undefined);
+                    });
+                }
             }
         });
 
