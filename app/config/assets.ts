@@ -1,12 +1,13 @@
 export const STARC_ROUTER_ADDRESS = '0x1eda051D6C1cbD07026B63E3E8DF6e154239bBC4';
 export const STREAMING_PAYMENTS_ADDRESS = '0x8572a110f6a41116d0ace7f24d7f744893385673';
 export const LIQUIDITY_MANAGER_ADDRESS = '0xfc4b34e57f348e2cb7b1f7396881e183e7611825';
-export const USDC_ADDRESS = '0x3600000000000000000000000000000000000000'; // Native USDC
+export const CCTP_TOKEN_MESSENGER_ADDRESS = '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA'; // Arc Testnet (CCTP V2)
+export const USDC_ADDRESS = '0x3600000000000000000000000000000000000000'; // Arc Testnet Native USDC (Gas Token)
 
 
 export const SUPPORTED_ASSETS = {
     'Native USDC': {
-        address: '0x3600000000000000000000000000000000000000', // Native USDC (Gas Token)
+        address: '0x3600000000000000000000000000000000000000', // Arc Testnet Native USDC
         vaultAddress: '0x6b9214D97aebd45D308F3dBdf599042f51B3D846', // Original Vault
         decimals: 18, // Arc Testnet uses 18 decimals for Native USDC (for display)
         symbol: 'USDC',

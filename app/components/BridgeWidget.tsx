@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { formatUnits } from 'viem';
-import { useAccount, useBalance } from 'wagmi';
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
 import { SUPPORTED_ASSETS } from '../config/assets';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -24,29 +23,91 @@ export function BridgeWidget() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const { address } = useAccount();
-  const { walletId, sdk } = useCircleWallet();
-  const usdcConfig = SUPPORTED_ASSETS.USDC;
+  const { walletId, sdk, walletAddress } = useCircleWallet();
+  const [balance, setBalance] = useState<string>('--');
 
-  // Native USDC is gas token - use useBalance instead of balanceOf
-  const { data: balanceData } = useBalance({
-    address: address,
-    query: { enabled: !!address }
-  });
+  // Fetch Circle Wallet Balance - Native USDC doesn't need approval
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!walletId) return;
+      try {
+        const res = await fetch(`/api/circle/wallet/balance?id=${walletId}`);
+        const data = await res.json();
+        
+        // Find Native USDC balance
+        const nativeUSDC = data?.data?.tokenBalances?.find(
+          (t: any) => t.token.isNative === true
+        );
+        
+        if (nativeUSDC) {
+          setBalance(nativeUSDC.amount);
+        }
+      } catch (e) {
+        console.error("Failed to fetch balance", e);
+      }
+    };
 
-  const balance = balanceData?.value ? formatUnits(balanceData.value, usdcConfig.decimals) : '--';
+    fetchData();
+    const interval = setInterval(fetchData, 10000); // Poll every 10s
+    return () => clearInterval(interval);
+  }, [walletId]);
+
+  const pollForTxHash = async (userId: string, initialTxCount: number): Promise<string | null> => {
+    const userToken = localStorage.getItem('circle_user_token');
+    console.log(`Starting poll with initial tx count: ${initialTxCount}`);
+    
+    for (let i = 0; i < 15; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      try {
+        const headers: Record<string, string> = {};
+        if (userToken) headers['X-User-Token'] = userToken;
+        const res = await fetch(`/api/circle/wallet/transactions?userId=${userId}&pageSize=10`, { headers });
+        const data = await res.json();
+        
+        const currentTxCount = data?.data?.transactions?.length || 0;
+        console.log(`Polling attempt ${i+1}: Found ${currentTxCount} transactions (initial: ${initialTxCount})`);
+        
+        if (currentTxCount > initialTxCount) {
+          // NEW transaction found
+          const latestTx = data.data.transactions[0];
+          console.log(`Latest Tx: ${latestTx.id}, State: ${latestTx.state}, Hash: ${latestTx.txHash}`);
+          if (latestTx.txHash) {
+            console.log(`Tx Hash found: ${latestTx.txHash}`);
+            return latestTx.txHash;
+          }
+        }
+      } catch (error) { console.error('Polling error:', error); }
+    }
+    return null;
+  };
 
   const handleBridge = async () => {
     if (!walletId || !sdk || !amount) return;
     setIsProcessing(true);
+    setBridgeStatus('processing');
     
     try {
         const userId = localStorage.getItem('circle_user_id');
+        
+        // Get initial transaction count BEFORE bridge
+        const userToken = localStorage.getItem('circle_user_token');
+        const headers: Record<string, string> = {};
+        if (userToken) headers['X-User-Token'] = userToken;
+        const txRes = await fetch(`/api/circle/wallet/transactions?userId=${userId}&pageSize=10`, { headers });
+        const txData = await txRes.json();
+        const initialTxCount = txData?.data?.transactions?.length || 0;
+        console.log(`Bridge: Initial tx count = ${initialTxCount}`);
+        
         const res = await fetch('/api/treasury/bridge', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ walletId, userId, amount })
         });
         const data = await res.json();
+        
+        console.log("Bridge Initiated:", data);
+        console.log("Challenge ID:", data.challengeId);
+        console.log("API Response Full:", JSON.stringify(data, null, 2));
         
         if (data.challengeId) {
             if (data.userToken && data.encryptionKey) {
@@ -55,67 +116,26 @@ export function BridgeWidget() {
                 sdk.setAuthentication({ userToken: data.userToken, encryptionKey: data.encryptionKey });
             }
 
-            sdk.execute(data.challengeId, (error, result) => {
+            sdk.execute(data.challengeId, async (error, result) => {
                 if (error) {
                     setIsProcessing(false);
                     setBridgeStatus('error');
                     setErrorMessage(error.message || 'Bridge transaction failed');
-                    console.error("Bridge Challenge Error:", error);
                     return;
                 }
                 if (result) {
-                    console.log("Bridge Initiated:", result);
-
-                    // Poll for transaction hash
-                    const pollForTxHash = async () => {
-                        try {
-                            const userId = localStorage.getItem('circle_user_id');
-                            if (!userId) return null;
-
-                            for (let i = 0; i < 20; i++) {
-                                const userToken = localStorage.getItem('circle_user_token');
-                                const headers: Record<string, string> = {};
-                                if (userToken) headers['X-User-Token'] = userToken;
-
-                                const txRes = await fetch(`/api/circle/wallet/transactions?userId=${userId}&pageSize=10`, { headers });
-
-                                if (!txRes.ok) {
-                                    console.error("Failed to fetch transactions", await txRes.text());
-                                    await new Promise(resolve => setTimeout(resolve, 2000));
-                                    continue;
-                                }
-
-                                const txData = await txRes.json();
-                                console.log(`Polling attempt ${i+1}: Found ${txData?.data?.transactions?.length || 0} transactions`);
-
-                                if (txData?.data?.transactions?.length > 0) {
-                                    const latestTx = txData.data.transactions[0];
-                                    console.log(`Latest Tx: ${latestTx.id}, State: ${latestTx.state}, Hash: ${latestTx.txHash}`);
-                                    if (latestTx.txHash) {
-                                        console.log("Tx Hash found:", latestTx.txHash);
-                                        return latestTx.txHash;
-                                    }
-                                }
-                                await new Promise(resolve => setTimeout(resolve, 2000));
-                            }
-                        } catch (e) {
-                            console.error("Polling error", e);
-                        }
-                        return null;
-                    };
-
-                    // Poll and show result
-                    pollForTxHash().then(txHash => {
-                        setIsProcessing(false);
-                        if (txHash) {
-                            setTxHash(txHash);
-                            setBridgeStatus('success');
-                        } else {
-                            setBridgeStatus('error');
-                            setErrorMessage('Transaction hash not found. Please check your wallet later.');
-                        }
+                    console.log("Bridge challenge complete, polling for tx hash...");
+                    const hash = await pollForTxHash(userId!, initialTxCount);
+                    setIsProcessing(false);
+                    if (hash) {
+                        console.log("Bridge tx hash:", hash);
+                        setTxHash(hash);
+                        setBridgeStatus('success');
                         setAmount('');
-                    });
+                    } else {
+                        setBridgeStatus('error');
+                        setErrorMessage('Transaction hash not found.');
+                    }
                 }
             });
         } else {
@@ -127,7 +147,6 @@ export function BridgeWidget() {
         setIsProcessing(false);
         setBridgeStatus('error');
         setErrorMessage(e.message || 'An unexpected error occurred');
-        console.error("Bridge Error:", e);
     }
   };
 
@@ -190,9 +209,9 @@ export function BridgeWidget() {
             size="lg"
             onClick={handleBridge}
             isLoading={isProcessing}
-            disabled={!amount}
+            disabled={!amount || parseFloat(amount) <= 0 || parseFloat(balance) < parseFloat(amount || '0')}
           >
-            {isProcessing ? 'Bridging via CCTP...' : 'Bridge USDC'}
+            {isProcessing ? 'Bridging via CCTP...' : 'Bridge to Ethereum'}
           </Button>
 
           <div className="text-center text-xs text-zinc-400 mt-2">

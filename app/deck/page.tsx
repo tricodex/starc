@@ -41,19 +41,19 @@ export default function DeckPage() {
       content: (
         <div className="flex h-full">
           <div className="w-1/2 p-16 flex flex-col justify-center bg-white">
-            <h2 className="text-5xl font-bold text-zinc-900 font-display mb-12 leading-tight">The Fragmented <br/>Reality</h2>
+            <h2 className="text-5xl font-bold text-zinc-900 font-display mb-12 leading-tight">Merchant Adoption <br/></h2>
             <ul className="space-y-8 text-xl text-zinc-600">
               <li className="flex items-center gap-4">
                 <span className="w-3 h-3 bg-red-500 rounded-full shadow-sm"></span>
-                High Transaction Fees
+                Unstable Transaction Fees
               </li>
               <li className="flex items-center gap-4">
                 <span className="w-3 h-3 bg-red-500 rounded-full shadow-sm"></span>
-                Slow Settlement Times
+                Technical Barrier
               </li>
               <li className="flex items-center gap-4">
                 <span className="w-3 h-3 bg-red-500 rounded-full shadow-sm"></span>
-                Opaque Intermediaries
+                Too Many Stablecoins
               </li>
             </ul>
           </div>

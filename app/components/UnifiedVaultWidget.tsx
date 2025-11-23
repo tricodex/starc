@@ -10,13 +10,14 @@ import { SUPPORTED_ASSETS, STARC_ROUTER_ADDRESS } from '../config/assets';
 
 // Icons
 import { CheckCircleIcon, ShieldCheckIcon, BanknotesIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { TruncatedHash } from './ui/TruncatedHash';
 
 const ASSETS = [
-  { symbol: 'USDC', name: 'Native USDC', type: 'native', status: 'active', address: SUPPORTED_ASSETS['Native USDC'].address, decimals: 18 },
-  { symbol: 'USDC', name: 'Bridged USDC', type: 'legacy', status: 'migrating', address: '0x...', decimals: 6 },
-  { symbol: 'mUSDC', name: 'Mock USDC', type: 'mock', status: 'migrating', address: SUPPORTED_ASSETS['mUSDC'].address, decimals: 18 },
-  { symbol: 'mARS', name: 'Mock ARS', type: 'mock', status: 'migrating', address: SUPPORTED_ASSETS['mARS'].address, decimals: 18 },
-  { symbol: 'nARS', name: 'Nu ARS', type: 'mock', status: 'migrating', address: SUPPORTED_ASSETS['nARS'].address, decimals: 18 },
+  { symbol: 'USDC', name: 'Native USDC', type: 'native', status: 'active', address: SUPPORTED_ASSETS['Native USDC'].address, decimals: 18, isNative: true },
+  { symbol: 'USDC', name: 'Bridged USDC', type: 'legacy', status: 'migrating', address: '0x...', decimals: 6, isNative: false },
+  { symbol: 'mUSDC', name: 'Mock USDC', type: 'mock', status: 'migrating', address: SUPPORTED_ASSETS['mUSDC'].address, decimals: 18, isNative: false },
+  { symbol: 'mARS', name: 'Mock ARS', type: 'mock', status: 'migrating', address: SUPPORTED_ASSETS['mARS'].address, decimals: 18, isNative: false },
+  { symbol: 'nARS', name: 'Nu ARS', type: 'mock', status: 'migrating', address: SUPPORTED_ASSETS['nARS'].address, decimals: 18, isNative: false },
 ];
 
 export function UnifiedVaultWidget() {
@@ -44,19 +45,33 @@ export function UnifiedVaultWidget() {
     query: { refetchInterval: 5000 }
   });
 
-  // Allowance Check
+  // Allowance Check - Skip for native tokens
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: selectedAsset.address as `0x${string}`,
     abi: erc20Abi,
     functionName: 'allowance',
     args: [walletAddress as `0x${string}`, vaultAddress],
-    query: { enabled: !!walletAddress && selectedAsset.status === 'active' }
+    query: { enabled: !!walletAddress && selectedAsset.status === 'active' && !selectedAsset.isNative }
   });
 
-  // Helper: Poll for Tx Hash
-  const pollForTxHash = async () => {
+  // Helper: Poll for Tx Hash - Track transaction count to get the NEW transaction
+  const pollForTxHash = async (isApproval: boolean = false) => {
     const userId = localStorage.getItem('circle_user_id');
     if (!userId) return null;
+
+    // Get current transaction count BEFORE executing
+    let initialTxCount = 0;
+    try {
+      const userToken = localStorage.getItem('circle_user_token');
+      const headers: Record<string, string> = {};
+      if (userToken) headers['X-User-Token'] = userToken;
+      const res = await fetch(`/api/circle/wallet/transactions?userId=${userId}&pageSize=10`, { headers });
+      const data = await res.json();
+      initialTxCount = data?.data?.transactions?.length || 0;
+      console.log(`Initial tx count: ${initialTxCount}`);
+    } catch (e) {
+      console.error("Failed to get initial tx count:", e);
+    }
 
     for (let i = 0; i < 20; i++) { // 40s timeout
       const userToken = localStorage.getItem('circle_user_token');
@@ -67,10 +82,14 @@ export function UnifiedVaultWidget() {
         const res = await fetch(`/api/circle/wallet/transactions?userId=${userId}&pageSize=10`, { headers });
         const data = await res.json();
         
-        if (data?.data?.transactions?.length > 0) {
-           // Ideally match challengeId, but taking latest for demo
+        if (data?.data?.transactions?.length > initialTxCount) {
+           // NEW transaction found - get the latest one
            const latest = data.data.transactions[0];
-           if (latest.txHash) return latest.txHash;
+           console.log(`Polling attempt ${i+1}: New tx found - ID: ${latest.id}, State: ${latest.state}, Hash: ${latest.txHash}`);
+           if (latest.txHash) {
+             console.log(`Tx Hash found: ${latest.txHash}`);
+             return latest.txHash;
+           }
         }
       } catch (e) {
         console.error("Polling error:", e);
@@ -119,14 +138,17 @@ export function UnifiedVaultWidget() {
         
         if (result) {
           console.log("Challenge success, polling for tx...");
-          const hash = await pollForTxHash();
+          const isApprovalStep = (step === 2);
+          const hash = await pollForTxHash(isApprovalStep);
           setLoading(false);
           if (hash) {
             setTxHash(hash);
             if (step === 2) {
+                console.log("Approval complete, moving to Mint step");
                 setStep(3); // Move to Mint
                 refetchAllowance();
             } else if (step === 3) {
+                console.log("Mint complete, resetting form");
                 setAmount(''); // Reset
             }
           }
@@ -159,9 +181,12 @@ export function UnifiedVaultWidget() {
     executeCircleTx(vaultAddress, callData);
   };
 
-  // Check if approved
+  // Check if approved - Native tokens skip approval
   useEffect(() => {
-    if (allowance && amount) {
+    if (selectedAsset.isNative) {
+      // Native USDC doesn't need approval, skip to step 3
+      if (step === 2 && amount) setStep(3);
+    } else if (allowance && amount) {
         const amountBN = parseUnits(amount, selectedAsset.decimals);
         if (allowance >= amountBN) {
             if (step === 2) setStep(3);
@@ -169,16 +194,20 @@ export function UnifiedVaultWidget() {
             if (step === 3) setStep(2);
         }
     }
-  }, [allowance, amount, step]);
+  }, [allowance, amount, step, selectedAsset.isNative]);
+
+  // Helper: Format number with max 6 decimals, remove trailing zeros
+  const formatAmount = (value: bigint | undefined, decimals: number) => {
+    if (!value) return '0.00';
+    const formatted = formatUnits(value, decimals);
+    const num = parseFloat(formatted);
+    if (num === 0) return '0.00';
+    if (num < 0.01) return num.toFixed(6).replace(/\.?0+$/, ''); // Small numbers: max 6 decimals
+    return num.toFixed(2); // Normal numbers: 2 decimals
+  };
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-display font-bold text-zinc-900">Unified Vault Protocol</h2>
-        <p className="text-zinc-500">Manage your stablecoin exposure and mint unified uTokens.</p>
-      </div>
-
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white p-4 rounded-xl border border-zinc-200">
@@ -199,14 +228,14 @@ export function UnifiedVaultWidget() {
         </div>
         <div className="bg-white p-4 rounded-xl border border-zinc-200">
           <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Total Assets</div>
-          <div className="text-lg font-bold text-zinc-900">
-            ${totalAssets ? formatUnits(totalAssets, 18) : '0.00'}
+          <div className="text-lg font-bold text-zinc-900 truncate" title={totalAssets ? formatUnits(totalAssets, 18) : '0.00'}>
+            ${formatAmount(totalAssets, 18)}
           </div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-zinc-200">
           <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Total Supply</div>
-          <div className="text-lg font-bold text-zinc-900">
-            {totalSupply ? formatUnits(totalSupply, 18) : '0.00'}
+          <div className="text-lg font-bold text-zinc-900 truncate" title={totalSupply ? formatUnits(totalSupply, 18) : '0.00'}>
+            {formatAmount(totalSupply, 18)}
           </div>
         </div>
       </div>
@@ -335,9 +364,14 @@ export function UnifiedVaultWidget() {
               </div>
 
               {txHash && (
-                <div className="mt-4 p-3 bg-emerald-50 text-emerald-700 rounded-lg text-sm flex items-center gap-2">
-                    <CheckCircleIcon className="w-5 h-5" />
-                    Transaction Successful: <span className="font-mono">{txHash.slice(0, 6)}...{txHash.slice(-4)}</span>
+                <div className="mt-4 p-3 bg-emerald-50 text-emerald-700 rounded-lg text-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                        <CheckCircleIcon className="w-5 h-5" />
+                        <span className="font-bold">Transaction Successful</span>
+                    </div>
+                    <div className="bg-white/50 rounded p-2">
+                        <TruncatedHash hash={txHash} externalLink={`https://testnet.arcscan.app/tx/${txHash}`} />
+                    </div>
                 </div>
               )}
             </div>

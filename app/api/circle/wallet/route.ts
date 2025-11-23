@@ -74,7 +74,7 @@ async function createWallet(userId: string): Promise<CircleWalletResponse & { us
     accountType: string;
   } = {
     idempotencyKey: uuidv4(),
-    blockchains: ['ARC-TESTNET'],
+    blockchains: ['ARB-SEPOLIA'],
     accountType: 'SCA'
   };
 
