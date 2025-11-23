@@ -132,7 +132,7 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress, contract
                         if (!userId) return null;
 
                         // Poll for a few times
-                        for (let i = 0; i < 15; i++) { // Increased attempts
+                        for (let i = 0; i < 20; i++) { // Increased attempts to 20 (40s)
                             const userToken = localStorage.getItem('circle_user_token');
                             const headers: Record<string, string> = {};
                             if (userToken) headers['X-User-Token'] = userToken;
@@ -147,11 +147,14 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress, contract
                             }
 
                             const txData = await txRes.json();
+                            console.log(`Polling attempt ${i+1}: Found ${txData?.data?.transactions?.length || 0} transactions`);
                             
                             if (txData?.data?.transactions?.length > 0) {
                                 // Ideally we match by challengeId if available in tx data, or just take latest
                                 const latestTx = txData.data.transactions[0];
+                                console.log("Latest Tx:", latestTx);
                                 if (latestTx.txHash) {
+                                    console.log("Tx Hash found:", latestTx.txHash);
                                     return latestTx.txHash;
                                 }
                             }
