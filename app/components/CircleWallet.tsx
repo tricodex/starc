@@ -34,15 +34,25 @@ export function CircleWallet({ onPay, amount, symbol, recipientAddress, contract
             .then(res => res.json())
             .then(data => {
                 if (data?.data?.tokenBalances) {
-                    // Find balance matching the requested symbol
-                    const token = data.data.tokenBalances.find((t: any) => 
-                        t.token.symbol === symbol || (symbol === 'USDC' && t.token.symbol === 'USDC')
-                    );
+                    // FIXED: Normalize symbols like AiAgent does
+                    const tokens: Record<string, any> = {};
+                    data.data.tokenBalances.forEach((t: any) => {
+                        // Store by original symbol
+                        tokens[t.token.symbol] = t;
+                        // Store by normalized symbol (e.g. USDC-TESTNET -> USDC)
+                        const normalizedSymbol = t.token.symbol.replace('-TESTNET', '');
+                        tokens[normalizedSymbol] = t;
+                    });
+
+                    // Lookup token using the requested symbol (which is likely 'USDC')
+                    const token = symbol ? tokens[symbol] : null;
                     
                     if (token) {
                         setBalance(token.amount);
                         setTokenId(token.token.id);
+                        console.log(`CircleWallet: Found token ${symbol} (ID: ${token.token.id}) with balance ${token.amount}`);
                     } else {
+                        console.warn(`CircleWallet: Token ${symbol} not found in wallet. Available:`, Object.keys(tokens));
                         setBalance('0.00');
                     }
                 }
